@@ -1,0 +1,268 @@
+[gd_scene load_steps=38 format=3 uid="uid://fxtibbpha2uy"]
+
+[ext_resource type="Script" uid="uid://yo6o0dnaokx1" path="res://scripts/terrain_generator.gd" id="1_a202f"]
+[ext_resource type="Script" uid="uid://b4qygo0dkkp2g" path="res://scripts/terrain_config.gd" id="2_a0tk4"]
+[ext_resource type="Script" uid="uid://mqnc8tmrf1mp" path="res://camera_3d.gd" id="2_noarx"]
+[ext_resource type="Script" uid="uid://cuu22thh52qsj" path="res://scripts/biome.gd" id="2_r3fl7"]
+[ext_resource type="FastNoiseLite" uid="uid://c35p6yt5l8dyi" path="res://noises/continentalness.tres" id="3_i5arm"]
+[ext_resource type="FastNoiseLite" uid="uid://bpocydun56avg" path="res://noises/erosion.tres" id="4_4arys"]
+[ext_resource type="Material" uid="uid://exoos7a2asvc" path="res://water.tres" id="4_jka67"]
+[ext_resource type="FastNoiseLite" uid="uid://b8hvxyg48atci" path="res://noises/difficulty.tres" id="4_tereu"]
+[ext_resource type="FastNoiseLite" uid="uid://bglsf8xewapix" path="res://noises/humidity.tres" id="5_6iypd"]
+[ext_resource type="FastNoiseLite" uid="uid://j6gpi4ikn3pl" path="res://noises/peaks_and_valleys.tres" id="5_wc5p8"]
+[ext_resource type="Shader" uid="uid://xpbhbvdl1ds8" path="res://terrain.gdshader" id="7_cdqbm"]
+[ext_resource type="FastNoiseLite" uid="uid://neh0047ipvn2" path="res://noises/temperature.tres" id="8_6iypd"]
+
+[sub_resource type="Resource" id="Resource_i5arm"]
+script = ExtResource("2_r3fl7")
+label = "Ocean"
+id = 0
+color = Color(0, 0.214667, 0.46, 1)
+height_range = Vector2(-30, 10)
+strict_height = true
+humidity_range = Vector2(-1, 1)
+temperature_range = Vector2(-1, 1)
+difficulty_range = Vector2(-1, 1)
+metadata/_custom_type_script = ExtResource("2_r3fl7")
+
+[sub_resource type="Resource" id="Resource_wc5p8"]
+script = ExtResource("2_r3fl7")
+label = "Grasslands"
+id = 1
+color = Color(0.424461, 0.660684, 0.286038, 1)
+height_range = Vector2(12, 30)
+strict_height = false
+humidity_range = Vector2(-0.3, 0.6)
+temperature_range = Vector2(-0.2, 0.6)
+difficulty_range = Vector2(-1, 1)
+metadata/_custom_type_script = ExtResource("2_r3fl7")
+
+[sub_resource type="Resource" id="Resource_jsk3o"]
+script = ExtResource("2_r3fl7")
+label = "Beach"
+id = 2
+color = Color(0.85, 0.78625, 0.4675, 1)
+height_range = Vector2(9, 12)
+strict_height = true
+humidity_range = Vector2(-1, 1)
+temperature_range = Vector2(-1, 1)
+difficulty_range = Vector2(-1, 1)
+metadata/_custom_type_script = ExtResource("2_r3fl7")
+
+[sub_resource type="Resource" id="Resource_imku0"]
+script = ExtResource("2_r3fl7")
+label = "Forest"
+id = 8
+color = Color(0.30388, 0.554955, 0, 1)
+height_range = Vector2(25, 50)
+strict_height = false
+humidity_range = Vector2(-0.2, 0.6)
+temperature_range = Vector2(-0.2, 0.6)
+difficulty_range = Vector2(-1, 1)
+metadata/_custom_type_script = ExtResource("2_r3fl7")
+
+[sub_resource type="Resource" id="Resource_6iypd"]
+script = ExtResource("2_r3fl7")
+label = "Swamp"
+id = 4
+color = Color(1.05888e-06, 0.425975, 0.257865, 1)
+height_range = Vector2(10, 15)
+strict_height = false
+humidity_range = Vector2(0.5, 1)
+temperature_range = Vector2(0, 0.8)
+difficulty_range = Vector2(-1, 1)
+metadata/_custom_type_script = ExtResource("2_r3fl7")
+
+[sub_resource type="Resource" id="Resource_r3fl7"]
+script = ExtResource("2_r3fl7")
+label = "Mountain"
+id = 5
+color = Color(0.481789, 0.481789, 0.481789, 1)
+height_range = Vector2(30, 80)
+strict_height = true
+humidity_range = Vector2(-1, 1)
+temperature_range = Vector2(-1, 1)
+difficulty_range = Vector2(-1, 1)
+metadata/_custom_type_script = ExtResource("2_r3fl7")
+
+[sub_resource type="Resource" id="Resource_tereu"]
+script = ExtResource("2_r3fl7")
+label = "Desert"
+id = 6
+color = Color(1, 0.866667, 0, 1)
+height_range = Vector2(10, 50)
+strict_height = false
+humidity_range = Vector2(-1, -0.5)
+temperature_range = Vector2(0.5, 1)
+difficulty_range = Vector2(-1, 1)
+metadata/_custom_type_script = ExtResource("2_r3fl7")
+
+[sub_resource type="Resource" id="Resource_cdqbm"]
+script = ExtResource("2_r3fl7")
+label = "Savanna"
+id = 7
+color = Color(0.560793, 0.61, 0.3416, 1)
+height_range = Vector2(10, 50)
+strict_height = false
+humidity_range = Vector2(-0.5, 0.2)
+temperature_range = Vector2(0.2, 0.8)
+difficulty_range = Vector2(-1, 1)
+metadata/_custom_type_script = ExtResource("2_r3fl7")
+
+[sub_resource type="Resource" id="Resource_4arys"]
+script = ExtResource("2_r3fl7")
+label = "Forest Taiga"
+id = 8
+color = Color(0.211251, 0.397521, 0, 1)
+height_range = Vector2(25, 50)
+strict_height = false
+humidity_range = Vector2(-0.2, 0.6)
+temperature_range = Vector2(-1, 0)
+difficulty_range = Vector2(-1, 1)
+metadata/_custom_type_script = ExtResource("2_r3fl7")
+
+[sub_resource type="NoiseTexture2D" id="NoiseTexture2D_tereu"]
+generate_mipmaps = false
+seamless = true
+normalize = false
+noise = ExtResource("3_i5arm")
+
+[sub_resource type="Curve" id="Curve_a0tk4"]
+_limits = [0.0, 50.0, -1.0, 1.0]
+_data = [Vector2(-1, 0), 0.0, 0.0, 0, 0, Vector2(-0.0491159, 3.12957), 0.0, 0.0, 0, 0, Vector2(0.308204, 14.5554), 0.0, 0.0, 0, 0, Vector2(1, 22.4622), 0.0, 0.0, 0, 0]
+point_count = 4
+
+[sub_resource type="NoiseTexture2D" id="NoiseTexture2D_cdqbm"]
+normalize = false
+noise = ExtResource("4_tereu")
+
+[sub_resource type="NoiseTexture2D" id="NoiseTexture2D_imku0"]
+normalize = false
+noise = ExtResource("4_4arys")
+
+[sub_resource type="Curve" id="Curve_6iypd"]
+_limits = [0.0, 80.0, -1.0, 1.0]
+_data = [Vector2(-1, 80), 0.0, -192.962, 0, 0, Vector2(-0.818182, 55.5705), -45.1982, -45.1982, 0, 0, Vector2(-0.713163, 29.7511), 14.5322, 14.5322, 0, 0, Vector2(-0.56778, 49.5461), 0.0, 0.0, 0, 0, Vector2(-0.436807, 22.4161), 0.0, 0.0, 0, 0, Vector2(0.186641, 5.7467), 0.0, 0.0, 0, 0, Vector2(0.503326, 9.32886), 0.0, 0.0, 0, 0, Vector2(0.640798, 36.8121), 0.0, 0.0, 0, 0, Vector2(0.747228, 34.1946), 0.0, 0.0, 0, 0, Vector2(0.874263, 4.08126), 0.0, 0.0, 0, 0, Vector2(1, 0), 0.0, 0.0, 0, 0]
+point_count = 11
+
+[sub_resource type="NoiseTexture2D" id="NoiseTexture2D_wlxy5"]
+normalize = false
+noise = ExtResource("5_6iypd")
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_cdqbm"]
+render_priority = 0
+shader = ExtResource("7_cdqbm")
+shader_parameter/biome_colors = null
+shader_parameter/height_ranges = null
+shader_parameter/humidity_ranges = null
+shader_parameter/temperature_ranges = null
+shader_parameter/difficulty_ranges = null
+shader_parameter/strict_height = null
+shader_parameter/biome_count = null
+shader_parameter/max_height = null
+shader_parameter/min_height = null
+
+[sub_resource type="NoiseTexture2D" id="NoiseTexture2D_3v7ru"]
+normalize = false
+noise = ExtResource("5_wc5p8")
+
+[sub_resource type="Curve" id="Curve_tereu"]
+_limits = [-30.0, 50.0, -1.0, 1.0]
+_data = [Vector2(-0.917, 0), 0.0, 0.0, 0, 0, Vector2(-0.119843, 0), 0.0, 0.0, 0, 0, Vector2(0.694013, -10.6376), -41.5206, -41.5206, 0, 0, Vector2(1, -20.2349), -1.18923, 0.0, 0, 0]
+point_count = 4
+
+[sub_resource type="NoiseTexture2D" id="NoiseTexture2D_tcnuu"]
+normalize = false
+noise = ExtResource("8_6iypd")
+
+[sub_resource type="Resource" id="Resource_jka67"]
+script = ExtResource("2_a0tk4")
+chunk_size = 16
+vertex_per_meter = 2
+view_distance = 3
+update_rate = 0.1
+world_seed = 5
+continentalness = SubResource("NoiseTexture2D_tereu")
+continentalness_curve = SubResource("Curve_a0tk4")
+peaks_and_valeys = SubResource("NoiseTexture2D_3v7ru")
+peaks_and_valeys_curve = SubResource("Curve_tereu")
+erosion = SubResource("NoiseTexture2D_imku0")
+erosion_curve = SubResource("Curve_6iypd")
+humidity = SubResource("NoiseTexture2D_wlxy5")
+temperature = SubResource("NoiseTexture2D_tcnuu")
+difficulty = SubResource("NoiseTexture2D_cdqbm")
+material = SubResource("ShaderMaterial_cdqbm")
+water_material = ExtResource("4_jka67")
+sea_level = 10.0
+biomes = Array[ExtResource("2_r3fl7")]([SubResource("Resource_i5arm"), SubResource("Resource_wc5p8"), SubResource("Resource_jsk3o"), SubResource("Resource_imku0"), SubResource("Resource_6iypd"), SubResource("Resource_r3fl7"), SubResource("Resource_tereu"), SubResource("Resource_cdqbm"), SubResource("Resource_4arys")])
+metadata/_custom_type_script = ExtResource("2_a0tk4")
+
+[sub_resource type="SphereShape3D" id="SphereShape3D_noarx"]
+
+[sub_resource type="CapsuleMesh" id="CapsuleMesh_a0tk4"]
+
+[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_a0tk4"]
+
+[sub_resource type="Sky" id="Sky_r3fl7"]
+sky_material = SubResource("ProceduralSkyMaterial_a0tk4")
+
+[sub_resource type="Environment" id="Environment_jka67"]
+background_mode = 2
+sky = SubResource("Sky_r3fl7")
+ambient_light_source = 2
+ambient_light_color = Color(0.28485, 0.28485, 0.28485, 1)
+reflected_light_source = 2
+tonemap_mode = 4
+glow_enabled = true
+fog_mode = 1
+fog_light_energy = 0.1
+fog_density = 1.0
+volumetric_fog_density = 0.007
+
+[node name="TerrainGenerator" type="Node3D" node_paths=PackedStringArray("origin")]
+script = ExtResource("1_a202f")
+config = SubResource("Resource_jka67")
+origin = NodePath("CharacterBody3D")
+
+[node name="CharacterBody3D" type="CharacterBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.964984, 0.262307, 0, -0.262307, 0.964984, 1.67982, 3.97993, 6.17667)
+motion_mode = 1
+script = ExtResource("2_noarx")
+SPRINT_SPEED = 50.0
+
+[node name="Camera3D" type="Camera3D" parent="CharacterBody3D"]
+fov = 100.0
+size = 15.0
+near = 0.001
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="CharacterBody3D"]
+shape = SubResource("SphereShape3D_noarx")
+disabled = true
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.925468, -0.089412, -0.368123, 0.371418, 0.405403, 0.835283, 0.0745534, -0.909755, 0.408396, 0, 3.43812, 0)
+shadow_enabled = true
+directional_shadow_mode = 0
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.23182, 0)
+mesh = SubResource("CapsuleMesh_a0tk4")
+
+[node name="PanelContainer" type="PanelContainer" parent="."]
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="MarginContainer" type="MarginContainer" parent="PanelContainer"]
+layout_mode = 2
+theme_override_constants/margin_left = 3
+theme_override_constants/margin_top = 3
+theme_override_constants/margin_right = 3
+theme_override_constants/margin_bottom = 3
+
+[node name="Label" type="Label" parent="PanelContainer/MarginContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 4
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_jka67")

@@ -1,0 +1,8 @@
+[gd_resource type="FastNoiseLite" format=3 uid="uid://j6gpi4ikn3pl"]
+
+[resource]
+frequency = 0.0038
+fractal_type = 2
+fractal_octaves = 1
+fractal_ping_pong_strength = 1.325
+domain_warp_amplitude = 4.545
