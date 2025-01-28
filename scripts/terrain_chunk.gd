@@ -18,6 +18,8 @@ static var biomes_index_label: Dictionary[int, Biome] = {}
 # public variables
 var generating: bool = false
 
+var rng: RandomNumberGenerator
+
 signal generated(meshes: Dictionary)
 
 static var biomes: Array[Biome]
@@ -68,6 +70,10 @@ static func _setup_shader_parameters():
 	shader_material.set_shader_parameter("min_height", min_height)
 	shader_material.set_shader_parameter("strict_height", strict_height)
 
+
+func _funny_randf(from: float, to: float):
+	return rng.randf_range(from, to)
+
 func _generate_features_positions() -> Dictionary[Vector2i, Array]:
 	var positions: Dictionary[Vector2i, Array] = {}
 	var occupied_positions: Array[Vector2i] = []
@@ -90,11 +96,11 @@ func _generate_features_positions() -> Dictionary[Vector2i, Array]:
 
 					var world_x = (float(x) / config.vertex_per_meter) + (grid_position.x * size)
 					var world_z = (float(z) / config.vertex_per_meter) + (grid_position.y * size)
-					if density > randf_range(0.0, 100.0):
+					if density > _funny_randf(0.0, 100.0):
 						var feature = feature_params.feature as Feature
-						var random_offset_x = randf_range(-feature.random_offset.x, feature.random_offset.x)
-						var random_offset_z = randf_range(-feature.random_offset.z, feature.random_offset.z)
-						var random_offset_y = randf_range(-feature.random_offset.y, feature.random_offset.y)
+						var random_offset_x = _funny_randf(-feature.random_offset.x, feature.random_offset.x)
+						var random_offset_z = _funny_randf(-feature.random_offset.z, feature.random_offset.z)
+						var random_offset_y = _funny_randf(-feature.random_offset.y, feature.random_offset.y)
 						world_x += random_offset_x
 						world_z += random_offset_z
 						var height = get_interpolated_height_at_world_position(Vector3(world_x, 0.0, world_z))
@@ -189,9 +195,7 @@ static func determine_biome(world_x: float, world_z: float) -> Biome:
 		var height_range = (b.height_range.y - b.height_range.x) / 2.0
 		var height_score = 1.0 - (height_diff / height_range)
 		if height_score < 0:
-			height_score *= 2.0 # Penalize more for being out of range
-			if b.strict_height:
-				height_score *= 10.0; # Double the penalty for being out of range
+			height_score *= 20.0 # Penalize more for being out of range
 		score += height_score
 
 		# Calculate score for humidity
@@ -250,6 +254,9 @@ func _generate_water_mesh() -> PlaneMesh:
 	return mesh
 
 func _generate() -> void:
+	rng = RandomNumberGenerator.new()
+	rng.seed = config.world_seed
+
 	height_data.resize(vertex_count * vertex_count)
 	biome_data.resize(vertex_count * vertex_count)
 
@@ -373,8 +380,8 @@ func _instantiate_instances(feature: Feature, positions: Array) -> void:
 		var instance := feature.scene.instantiate() as Node3D
 		add_child(instance)
 		instance.global_position = pos
-		instance.global_rotation = Vector3(0.0, deg_to_rad(randf_range(feature.random_rotation.x, feature.random_rotation.y)), 0.0)
-		var random_scale = randf_range(feature.random_scale.x, feature.random_scale.y)
+		instance.global_rotation = Vector3(0.0, deg_to_rad(_funny_randf(feature.random_rotation.x, feature.random_rotation.y)), 0.0)
+		var random_scale = _funny_randf(feature.random_scale.x, feature.random_scale.y)
 		instance.scale = Vector3(random_scale, random_scale, random_scale)
 
 

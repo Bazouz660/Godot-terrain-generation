@@ -9,6 +9,7 @@ var terrain_chunks: Dictionary[Vector2i, TerrainChunk] = {}
 var timer := Timer.new()
 
 func _ready():
+	config.setup()
 	TerrainChunk.set_config(config)
 	timer.timeout.connect(_refresh_chunks)
 	timer.wait_time = config.update_rate

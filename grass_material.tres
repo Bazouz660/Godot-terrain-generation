@@ -1,6 +1,6 @@
 [gd_resource type="ShaderMaterial" load_steps=5 format=3 uid="uid://cq5i4xxexy0gj"]
 
-[ext_resource type="Shader" path="res://billboard_sway.gdshader" id="1_nf6bo"]
+[ext_resource type="Shader" uid="uid://dq6wxe76a2x5q" path="res://billboard_sway.gdshader" id="1_nf6bo"]
 [ext_resource type="Texture2D" uid="uid://c2fqujuastn6o" path="res://grass_blade.png" id="2_36huk"]
 
 [sub_resource type="FastNoiseLite" id="FastNoiseLite_p3eg5"]

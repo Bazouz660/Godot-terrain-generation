@@ -31,10 +31,7 @@ float calculate_biome_score(int biome_index, float height, float humidity, float
     float height_diff = abs(height - height_center);
     float height_score = 1.0 - (height_diff / height_range);
     if (height_score < 0.0) {
-        height_score *= 2.0; // Double the penalty for being out of range
-        if (strict_height[biome_index]) {
-            height_score *= 10.0; // Double the penalty for being out of range
-        }
+        height_score *= 20.0; // Double the penalty for being out of range
     }
     score += height_score;
 

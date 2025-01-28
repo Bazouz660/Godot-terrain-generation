@@ -30,9 +30,9 @@ class_name TerrainConfig
 @export var biomes: Array[Biome] = []
 
 func setup():
-	continentalness.seed = world_seed
-	peaks_and_valeys.seed = world_seed + 1
-	erosion.seed = world_seed + 2
-	humidity.seed = world_seed + 3
-	temperature.seed = world_seed + 4
-	difficulty.seed = world_seed + 5
+	(continentalness.noise as FastNoiseLite).seed = world_seed
+	(peaks_and_valeys.noise as FastNoiseLite).seed = world_seed + 1
+	(erosion.noise as FastNoiseLite).seed = world_seed + 2
+	(humidity.noise as FastNoiseLite).seed = world_seed + 3
+	(temperature.noise as FastNoiseLite).seed = world_seed + 4
+	(difficulty.noise as FastNoiseLite).seed = world_seed + 5
