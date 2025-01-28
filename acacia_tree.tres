@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="Feature" load_steps=3 format=3 uid="uid://blhf8mvcujt8u"]
+
+[ext_resource type="Script" uid="uid://bm7qyhn2d3ott" path="res://scripts/feature.gd" id="1_kplc3"]
+[ext_resource type="PackedScene" uid="uid://ckxawl6bb6dvj" path="res://acacia_tree.tscn" id="2_b5n1p"]
+
+[resource]
+script = ExtResource("1_kplc3")
+label = "Acacia Tree"
+type = 0
+scene = ExtResource("2_b5n1p")
+random_scale = Vector2(0.8, 1.2)
+random_rotation = Vector2(0, 360)
+random_offset = Vector3(0, 0, 0)
+follow_normals = false
+metadata/_custom_type_script = ExtResource("1_kplc3")

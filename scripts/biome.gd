@@ -9,3 +9,4 @@ class_name Biome
 @export var humidity_range: Vector2 = Vector2(-1.0, 1.0)
 @export var temperature_range: Vector2 = Vector2(-1.0, 1.0)
 @export var difficulty_range: Vector2 = Vector2(-1.0, 1.0)
+@export var features: Array[FeatureGenParams] = []

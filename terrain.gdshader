@@ -1,8 +1,8 @@
 shader_type spatial;
-render_mode world_vertex_coords;
+render_mode world_vertex_coords, specular_toon, diffuse_toon;
 
 // Maximum number of biomes
-const int MAX_BIOMES = 16;
+const int MAX_BIOMES = 32;
 
 // Biome data
 uniform vec3 biome_colors[MAX_BIOMES];
@@ -14,6 +14,7 @@ uniform bool strict_height[MAX_BIOMES];
 uniform int biome_count;
 uniform float max_height;
 uniform float min_height;
+uniform sampler2D gradient : source_color;
 
 varying vec3 noise_values1; // continentalness, erosion, peaks_valleys
 varying vec3 noise_values2; // humidity, temperature, difficulty
@@ -25,32 +26,37 @@ float calculate_biome_score(int biome_index, float height, float humidity, float
     height = mix(min_height, max_height, height);
 
     // Calculate score for height
-    if (strict_height[biome_index]) {
-        if (height >= height_ranges[biome_index].x && height <= height_ranges[biome_index].y) {
-            score += 10.0;
-        } else {
-            score -= 10.0;
+    float height_center = (height_ranges[biome_index].x + height_ranges[biome_index].y) * 0.5;
+    float height_range = (height_ranges[biome_index].y - height_ranges[biome_index].x) * 0.5;
+    float height_diff = abs(height - height_center);
+    float height_score = 1.0 - (height_diff / height_range);
+    if (height_score < 0.0) {
+        height_score *= 2.0; // Double the penalty for being out of range
+        if (strict_height[biome_index]) {
+            height_score *= 10.0; // Double the penalty for being out of range
         }
-    } else {
-        float height_score = 1.0 - abs((height - height_ranges[biome_index].x) /
-                                     (height_ranges[biome_index].y - height_ranges[biome_index].x));
-        score += height_score;
     }
+    score += height_score;
 
     // Calculate score for humidity
-    float humidity_score = 1.0 - abs((humidity - humidity_ranges[biome_index].x) /
-                                   (humidity_ranges[biome_index].y - humidity_ranges[biome_index].x));
+    float humidity_center = (humidity_ranges[biome_index].x + humidity_ranges[biome_index].y) * 0.5;
+    float humidity_range = (humidity_ranges[biome_index].y - humidity_ranges[biome_index].x) * 0.5;
+    float humidity_diff = abs(humidity - humidity_center);
+    float humidity_score = 1.0 - (humidity_diff / humidity_range);
+    if (humidity_score < 0.0) {
+        humidity_score *= 2.0; // Double the penalty for being out of range
+    }
     score += humidity_score;
 
     // Calculate score for temperature
-    float temperature_score = 1.0 - abs((temperature - temperature_ranges[biome_index].x) /
-                                      (temperature_ranges[biome_index].y - temperature_ranges[biome_index].x));
+    float temperature_center = (temperature_ranges[biome_index].x + temperature_ranges[biome_index].y) * 0.5;
+    float temperature_range = (temperature_ranges[biome_index].y - temperature_ranges[biome_index].x) * 0.5;
+    float temperature_diff = abs(temperature - temperature_center);
+    float temperature_score = 1.0 - (temperature_diff / temperature_range);
+    if (temperature_score < 0.0) {
+        temperature_score *= 2.0; // Double the penalty for being out of range
+    }
     score += temperature_score;
-
-    // // Calculate score for difficulty
-    // float difficulty_score = 1.0 - abs((difficulty - difficulty_ranges[biome_index].x) /
-    //                                  (difficulty_ranges[biome_index].y - difficulty_ranges[biome_index].x));
-    // score += difficulty_score;
 
     return score;
 }
@@ -64,7 +70,6 @@ void fragment() {
     float height = noise_values1.r;
     float humidity = noise_values1.g;
     float temperature = noise_values1.b;
-    //float difficulty = noise_values2.r;
 
     // Find the best matching biome
     float best_score = -1.0;
@@ -80,4 +85,5 @@ void fragment() {
 
     // Use the exact color of the best matching biome
     ALBEDO = biome_colors[best_biome];
+	BACKLIGHT = vec3(1.0);
 }

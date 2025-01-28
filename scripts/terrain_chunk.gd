@@ -12,6 +12,8 @@ var water_mesh_instance: MeshInstance3D
 var grid_position: Vector2i
 var height_data: Array[float] = []
 var biome_data: Array[int] = []
+static var biomes_label_index: Dictionary[String, Biome] = {}
+static var biomes_index_label: Dictionary[int, Biome] = {}
 
 # public variables
 var generating: bool = false
@@ -47,6 +49,10 @@ static func _setup_shader_parameters():
 		difficulty_ranges.append(biome.difficulty_range)
 		strict_height.append(biome.strict_height)
 
+		# add to index
+		biomes_label_index[biome.label] = biome
+		biomes_index_label[biome.id] = biome
+
 		if biome.height_range.y > max_height:
 			max_height = biome.height_range.y
 		if biome.height_range.x < min_height:
@@ -62,6 +68,47 @@ static func _setup_shader_parameters():
 	shader_material.set_shader_parameter("min_height", min_height)
 	shader_material.set_shader_parameter("strict_height", strict_height)
 
+func _generate_features_positions() -> Dictionary[Vector2i, Array]:
+	var positions: Dictionary[Vector2i, Array] = {}
+	var occupied_positions: Array[Vector2i] = []
+
+	var biome_index := 0
+	for biome in biomes:
+		var feature_index := 0
+		for feature_params in biome.features:
+			feature_params = feature_params as FeatureGenParams
+			var density = feature_params.density
+			var positions_list = []
+			for z in range(vertex_count):
+				for x in range(vertex_count):
+
+					if occupied_positions.find(Vector2i(x, z)) != -1:
+						continue
+
+					if biome_data[z * vertex_count + x] != biome_index:
+						continue
+
+					var world_x = (float(x) / config.vertex_per_meter) + (grid_position.x * size)
+					var world_z = (float(z) / config.vertex_per_meter) + (grid_position.y * size)
+					if density > randf_range(0.0, 100.0):
+						var feature = feature_params.feature as Feature
+						var random_offset_x = randf_range(-feature.random_offset.x, feature.random_offset.x)
+						var random_offset_z = randf_range(-feature.random_offset.z, feature.random_offset.z)
+						var random_offset_y = randf_range(-feature.random_offset.y, feature.random_offset.y)
+						world_x += random_offset_x
+						world_z += random_offset_z
+						var height = get_interpolated_height_at_world_position(Vector3(world_x, 0.0, world_z))
+						height += random_offset_y
+						var pos = Vector3(world_x, height, world_z)
+						positions_list.append(pos)
+						occupied_positions.append(Vector2i(x, z))
+
+			if positions_list.size() > 0:
+				positions[Vector2i(biome_index, feature_index)] = positions_list
+			feature_index += 1
+		biome_index += 1
+
+	return positions
 
 func _init(p_grid_position: Vector2i):
 	size = config.chunk_size
@@ -90,24 +137,26 @@ func get_height_at_world_position(world_position: Vector3) -> float:
 	return height_data[z * vertex_count + x]
 
 func get_interpolated_height_at_world_position(world_position: Vector3) -> float:
-	var local_position = world_position - global_transform.origin
-	var x = local_position.x * config.vertex_per_meter
-	var z = local_position.z * config.vertex_per_meter
-	if x < 0 or x >= vertex_count - 1 or z < 0 or z >= vertex_count - 1:
-		return 0.0
-	var x0 = int(x)
-	var z0 = int(z)
-	var x1 = x0 + 1
-	var z1 = z0 + 1
-	var h00 = height_data[z0 * vertex_count + x0]
-	var h01 = height_data[z0 * vertex_count + x1]
-	var h10 = height_data[z1 * vertex_count + x0]
-	var h11 = height_data[z1 * vertex_count + x1]
-	var tx = x - x0
-	var tz = z - z0
-	var h0 = lerp(h00, h01, tx)
-	var h1 = lerp(h10, h11, tx)
-	return lerp(h0, h1, tz)
+	# Get the floor of the coordinates
+	var x_floor: float = floor(world_position.x)
+	var z_floor: float = floor(world_position.z)
+
+	# Sample heights at the four corners
+	var h00 := _sample_height(x_floor, z_floor)
+	var h01 := _sample_height(x_floor + 1.0, z_floor)
+	var h10 := _sample_height(x_floor, z_floor + 1.0)
+	var h11 := _sample_height(x_floor + 1.0, z_floor + 1.0)
+
+	# Calculate interpolation ratios
+	var x_ratio := world_position.x - x_floor
+	var z_ratio := world_position.z - z_floor
+
+	# Perform bilinear interpolation
+	var h0: float = lerp(h00, h01, x_ratio)
+	var h1: float = lerp(h10, h11, x_ratio)
+
+	return lerp(h0, h1, z_ratio)
+
 
 static func _sample_height(world_x: float, world_z: float) -> float:
 	var continentalness = config.continentalness.noise.get_noise_2d(world_x, world_z)
@@ -127,7 +176,6 @@ static func determine_biome(world_x: float, world_z: float) -> Biome:
 	var height = _sample_height(world_x, world_z)
 	var humidity = config.humidity.noise.get_noise_2d(world_x, world_z)
 	var temperature = config.temperature.noise.get_noise_2d(world_x, world_z)
-
 	var difficulty = config.difficulty.noise.get_noise_2d(world_x, world_z)
 
 	var best_biome: Biome = null
@@ -137,25 +185,37 @@ static func determine_biome(world_x: float, world_z: float) -> Biome:
 		var score = 0.0
 
 		# Calculate score for height
-		if b.strict_height:
-			if height >= b.height_range.x and height <= b.height_range.y:
-				score += 10.0
-			else:
-				score -= 10.0
-		else:
-			var height_score = 1.0 - abs((height - b.height_range.x) / (b.height_range.y - b.height_range.x))
-			score += height_score
+		var height_diff = abs(height - (b.height_range.x + b.height_range.y) / 2.0)
+		var height_range = (b.height_range.y - b.height_range.x) / 2.0
+		var height_score = 1.0 - (height_diff / height_range)
+		if height_score < 0:
+			height_score *= 2.0 # Penalize more for being out of range
+			if b.strict_height:
+				height_score *= 10.0; # Double the penalty for being out of range
+		score += height_score
 
 		# Calculate score for humidity
-		var humidity_score = 1.0 - abs((humidity - b.humidity_range.x) / (b.humidity_range.y - b.humidity_range.x))
+		var humidity_diff = abs(humidity - (b.humidity_range.x + b.humidity_range.y) / 2.0)
+		var humidity_range = (b.humidity_range.y - b.humidity_range.x) / 2.0
+		var humidity_score = 1.0 - (humidity_diff / humidity_range)
+		if humidity_score < 0:
+			humidity_score *= 2.0 # Penalize more for being out of range
 		score += humidity_score
 
 		# Calculate score for temperature
-		var temperature_score = 1.0 - abs((temperature - b.temperature_range.x) / (b.temperature_range.y - b.temperature_range.x))
+		var temperature_diff = abs(temperature - (b.temperature_range.x + b.temperature_range.y) / 2.0)
+		var temperature_range = (b.temperature_range.y - b.temperature_range.x) / 2.0
+		var temperature_score = 1.0 - (temperature_diff / temperature_range)
+		if temperature_score < 0:
+			temperature_score *= 2.0 # Penalize more for being out of range
 		score += temperature_score
 
 		# Calculate score for difficulty
-		var difficulty_score = 1.0 - abs((difficulty - b.difficulty_range.x) / (b.difficulty_range.y - b.difficulty_range.x))
+		var difficulty_diff = abs(difficulty - (b.difficulty_range.x + b.difficulty_range.y) / 2.0)
+		var difficulty_range = (b.difficulty_range.y - b.difficulty_range.x) / 2.0
+		var difficulty_score = 1.0 - (difficulty_diff / difficulty_range)
+		if difficulty_score < 0:
+			difficulty_score *= 2.0 # Penalize more for being out of range
 		score += difficulty_score
 
 		# Update best biome if current biome has a higher score
@@ -195,13 +255,15 @@ func _generate() -> void:
 
 	var mesh = _generate_mesh()
 	var water_mesh = _generate_water_mesh()
+	var feature_positions: Dictionary[Vector2i, Array] = _generate_features_positions()
 
-	var meshes = {
+	var data = {
 		"mesh": mesh,
-		"water_mesh": water_mesh
+		"water_mesh": water_mesh,
+		"feature_positions": feature_positions
 	}
 
-	generated.emit.call_deferred(meshes)
+	generated.emit.call_deferred(data)
 
 # normalizes noise values from -1 to 1 to 0 to 1
 static func normalize_noise_value(value: float) -> float:
@@ -238,6 +300,7 @@ func _generate_mesh() -> ArrayMesh:
 			st.set_uv(uv)
 			var color := Color.PURPLE
 			var biome = determine_biome(world_x, world_z)
+			biome_data[z * vertex_count + x] = biome.id
 			if biome:
 				color = biome.color
 
@@ -267,10 +330,61 @@ func _generate_mesh() -> ArrayMesh:
 
 	return st.commit()
 
-func _on_chunk_generated(meshes: Dictionary) -> void:
+func _instantiate_features(feature_positions: Dictionary[Vector2i, Array]) -> void:
+	for i in range(feature_positions.size()):
+		var key = feature_positions.keys()[i]
+		var positions = feature_positions[key]
+		var biome = biomes_index_label[key.x]
+		var feature := biome.features[key.y].feature as Feature
+
+		if not feature:
+			continue
+
+		if feature.type == Feature.FeatureType.INSTANCE:
+			_instantiate_instances(feature, positions)
+		elif feature.type == Feature.FeatureType.MULTIMESH:
+			_instantiate_multimesh(biome, feature, positions)
+
+
+func _instantiate_multimesh(biome: Biome, feature: Feature, positions: Array) -> void:
+	var multimesh_instance := MultiMeshInstance3D.new()
+	var multimesh := MultiMesh.new()
+	multimesh.transform_format = MultiMesh.TRANSFORM_3D
+	multimesh.instance_count = positions.size()
+	multimesh.mesh = feature.mesh
+	for i in range(positions.size()):
+		multimesh.set_instance_transform(i, Transform3D(Basis(), positions[i]))
+	multimesh_instance.multimesh = multimesh
+	multimesh_instance.cast_shadow = feature.cast_shadow
+
+	if feature.receive_biome_color:
+		var material := multimesh.mesh.surface_get_material(0)
+		if material is ShaderMaterial:
+			var material_duplicated = material.duplicate() as ShaderMaterial
+			material_duplicated.set_shader_parameter(feature.shader_parameter_color_name, biome.color)
+			multimesh_instance.material_override = material_duplicated
+
+
+	add_child(multimesh_instance)
+	multimesh_instance.global_transform.origin = Vector3(0.0, 0.0, 0.0)
+
+func _instantiate_instances(feature: Feature, positions: Array) -> void:
+	for pos in positions:
+		var instance := feature.scene.instantiate() as Node3D
+		add_child(instance)
+		instance.global_position = pos
+		instance.global_rotation = Vector3(0.0, deg_to_rad(randf_range(feature.random_rotation.x, feature.random_rotation.y)), 0.0)
+		var random_scale = randf_range(feature.random_scale.x, feature.random_scale.y)
+		instance.scale = Vector3(random_scale, random_scale, random_scale)
+
+
+func _on_chunk_generated(data: Dictionary) -> void:
+
 	generating = false
-	mesh_instance.mesh = meshes["mesh"]
-	water_mesh_instance.mesh = meshes["water_mesh"]
+	mesh_instance.mesh = data["mesh"]
+	water_mesh_instance.mesh = data["water_mesh"]
 	mesh_instance.material_override = config.material
 	water_mesh_instance.material_override = config.water_material
 	water_mesh_instance.position.y = config.sea_level
+
+	_instantiate_features(data["feature_positions"])

@@ -20,6 +20,8 @@ class_name TerrainConfig
 @export var temperature: NoiseTexture2D
 @export var difficulty: NoiseTexture2D
 
+@export var min_height: float = -1.0
+
 
 @export var material: Material
 @export var water_material: Material

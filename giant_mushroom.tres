@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="Feature" load_steps=3 format=3 uid="uid://b0sd2hcy1l4t0"]
+
+[ext_resource type="Script" uid="uid://bm7qyhn2d3ott" path="res://scripts/feature.gd" id="1_5hpub"]
+[ext_resource type="PackedScene" uid="uid://dc017g5r3bv00" path="res://giant_mushroom.tscn" id="2_naa51"]
+
+[resource]
+script = ExtResource("1_5hpub")
+label = "Giant Mushroom"
+type = 0
+scene = ExtResource("2_naa51")
+random_scale = Vector2(0.8, 1.1)
+random_rotation = Vector2(0, 360)
+random_offset = Vector3(0, 0, 0)
+follow_normals = false
+metadata/_custom_type_script = ExtResource("1_5hpub")
