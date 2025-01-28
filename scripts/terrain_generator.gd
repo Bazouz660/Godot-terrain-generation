@@ -7,6 +7,8 @@ class_name TerrainGenerator
 
 var terrain_chunks: Dictionary[Vector2i, TerrainChunk] = {}
 var timer := Timer.new()
+var current_thread_usage: int = 0
+var chunk_queue: Array[Vector2i] = []
 
 func _ready():
 	config.setup()
@@ -21,12 +23,26 @@ func _delete_chunk(chunk: TerrainChunk):
 	terrain_chunks.erase(chunk.grid_position)
 	chunk.queue_free()
 
+func add_chunk_to_queue(grid_position: Vector2i):
+	if not chunk_queue.has(grid_position):
+		chunk_queue.push_back(grid_position)
+
+func _process_chunk_queue():
+	if chunk_queue.size() > 0 and current_thread_usage < config.max_threads:
+		var grid_position = chunk_queue.pop_front()
+		_create_chunk(grid_position.x, grid_position.y)
+
 func _create_chunk(x: int, z: int):
 	var chunk = TerrainChunk.new(Vector2i(x, z))
 	chunk.position = Vector3(x * config.chunk_size, 0, z * config.chunk_size)
 	add_child(chunk)
 	terrain_chunks.get_or_add(chunk.grid_position, chunk)
 	chunk.generate()
+	current_thread_usage += 1
+	chunk.generated.connect(on_chunk_generated)
+
+func on_chunk_generated(_grid_position: Vector2i):
+	current_thread_usage -= 1
 
 func world_to_grid_position(world_position: Vector3) -> Vector2i:
 	var x = floori(world_position.x / config.chunk_size)
@@ -52,7 +68,14 @@ func _load_chunks():
 		for x in range(-view_distance, view_distance):
 			var check_position := Vector2i(x, z) + player_grid_position
 			if is_in_view_distance(check_position) and not terrain_chunks.has(check_position):
-				_create_chunk(check_position.x, check_position.y)
+				add_chunk_to_queue(check_position)
+
+func _refresh_chunk_queue():
+	# check the queue for any chunks that are out of view distance
+	for i in range(chunk_queue.size() - 1, -1, -1):
+		var grid_position = chunk_queue[i]
+		if not is_in_view_distance(grid_position):
+			chunk_queue.remove_at(i)
 
 func _get_current_chunk() -> TerrainChunk:
 	var player_grid_position := world_to_grid_position(origin.global_transform.origin)
@@ -61,8 +84,11 @@ func _get_current_chunk() -> TerrainChunk:
 func _refresh_chunks():
 	_unload_chunks()
 	_load_chunks()
+	_refresh_chunk_queue()
 
 func _process(delta):
+	_process_chunk_queue()
+
 	var label = %Label as Label
 	var world_pos := origin.global_transform.origin
 

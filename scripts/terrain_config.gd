@@ -6,6 +6,7 @@ class_name TerrainConfig
 @export var view_distance: int = 3
 @export var update_rate: float = 1.0
 @export var world_seed: int = 0
+@export var max_threads: int = 4
 
 @export var continentalness: NoiseTexture2D
 @export var continentalness_curve: Curve
@@ -19,9 +20,6 @@ class_name TerrainConfig
 @export var humidity: NoiseTexture2D
 @export var temperature: NoiseTexture2D
 @export var difficulty: NoiseTexture2D
-
-@export var min_height: float = -1.0
-
 
 @export var material: Material
 @export var water_material: Material

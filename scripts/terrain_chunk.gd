@@ -18,9 +18,10 @@ static var biomes_index_label: Dictionary[int, Biome] = {}
 # public variables
 var generating: bool = false
 
-var rng: RandomNumberGenerator
+var rng := RandomNumberGenerator.new()
 
-signal generated(meshes: Dictionary)
+signal _generated(meshes: Dictionary)
+signal generated(position: Vector2i)
 
 static var biomes: Array[Biome]
 
@@ -122,7 +123,7 @@ func _init(p_grid_position: Vector2i):
 	grid_position = p_grid_position
 
 func _ready():
-	generated.connect(_on_chunk_generated)
+	_generated.connect(_on_chunk_generated)
 	mesh_instance = MeshInstance3D.new()
 	water_mesh_instance = MeshInstance3D.new()
 	water_mesh_instance.position.x += size * 0.5
@@ -254,8 +255,7 @@ func _generate_water_mesh() -> PlaneMesh:
 	return mesh
 
 func _generate() -> void:
-	rng = RandomNumberGenerator.new()
-	rng.seed = config.world_seed
+	rng.seed = hash(config.world_seed + grid_position.x * grid_position.y)
 
 	height_data.resize(vertex_count * vertex_count)
 	biome_data.resize(vertex_count * vertex_count)
@@ -270,7 +270,8 @@ func _generate() -> void:
 		"feature_positions": feature_positions
 	}
 
-	generated.emit.call_deferred(data)
+	_generated.emit.call_deferred(data)
+	generated.emit.call_deferred(grid_position)
 
 # normalizes noise values from -1 to 1 to 0 to 1
 static func normalize_noise_value(value: float) -> float:

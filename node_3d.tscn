@@ -313,11 +313,12 @@ noise = ExtResource("8_6iypd")
 
 [sub_resource type="Resource" id="Resource_jka67"]
 script = ExtResource("2_a0tk4")
-chunk_size = 16
+chunk_size = 8
 vertex_per_meter = 2
-view_distance = 3
+view_distance = 15
 update_rate = 0.1
 world_seed = 80
+max_threads = 100
 continentalness = SubResource("NoiseTexture2D_tereu")
 continentalness_curve = SubResource("Curve_a0tk4")
 peaks_and_valeys = SubResource("NoiseTexture2D_3v7ru")
@@ -327,7 +328,6 @@ erosion_curve = SubResource("Curve_6iypd")
 humidity = SubResource("NoiseTexture2D_wlxy5")
 temperature = SubResource("NoiseTexture2D_tcnuu")
 difficulty = SubResource("NoiseTexture2D_cdqbm")
-min_height = -1.0
 material = SubResource("ShaderMaterial_cdqbm")
 water_material = ExtResource("4_jka67")
 sea_level = 10.0
