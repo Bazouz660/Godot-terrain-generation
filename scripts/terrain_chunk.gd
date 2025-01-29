@@ -15,6 +15,15 @@ var biome_data: Array[int] = []
 static var biomes_label_index: Dictionary[String, Biome] = {}
 static var biomes_index_label: Dictionary[int, Biome] = {}
 
+var continentalness_data: PackedFloat32Array
+var erosion_data: PackedFloat32Array
+var peaks_and_valleys_data: PackedFloat32Array
+var humidity_data: PackedFloat32Array
+var temperature_data: PackedFloat32Array
+var difficulty_data: PackedFloat32Array
+
+var time_to_generate
+
 # public variables
 var generating: bool = false
 
@@ -132,6 +141,9 @@ func _ready():
 	add_child(mesh_instance)
 
 func generate():
+
+	time_to_generate = Time.get_ticks_msec()
+
 	generating = true
 	WorkerThreadPool.add_task(_generate)
 
@@ -164,27 +176,79 @@ func get_interpolated_height_at_world_position(world_position: Vector3) -> float
 
 	return lerp(h0, h1, z_ratio)
 
+func _get_local_coords(world_position: Vector2) -> Vector2i:
+	var chunk_start_x = grid_position.x * size - (1.0 / config.vertex_per_meter)
+	var chunk_start_z = grid_position.y * size - (1.0 / config.vertex_per_meter)
+	var x = int(world_position.x - chunk_start_x) * config.vertex_per_meter
+	var y = int(world_position.y - chunk_start_z) * config.vertex_per_meter
+	return Vector2i(x, y)
 
-static func _sample_height(world_x: float, world_z: float) -> float:
-	var continentalness = config.continentalness.noise.get_noise_2d(world_x, world_z)
-	var peaks_and_valeys = config.peaks_and_valeys.noise.get_noise_2d(world_x, world_z)
-	var erosion = config.erosion.noise.get_noise_2d(world_x, world_z)
+func _2d_to_1d(x: int, y: int) -> int:
+	return y * vertex_count + x
+
+func _2d_to_1dv(v: Vector2i) -> int:
+	return v.y * vertex_count + v.x
+
+func _1d_to_2d(index: int) -> Vector2:
+	var x = index % vertex_count
+	var y = index / vertex_count
+	return Vector2(x, y)
+
+func get_index_from_world_coords(world_x: float, world_z: float) -> int:
+	# Step 1: Calculate local coordinates
+	var local_x = world_x - (grid_position.x * size)
+	var local_z = world_z - (grid_position.y * size)
+
+	# Step 2: Convert local coordinates to vertex indices
+	var x = int(local_x * config.vertex_per_meter)
+	var z = int(local_z * config.vertex_per_meter)
+
+	# Step 3: Adjust for the offset
+	var adjusted_x = x + 3
+	var adjusted_z = z + 3
+
+	# Step 4: Calculate the index
+	var extended_vertex_count = vertex_count + 6
+	var index = adjusted_z * extended_vertex_count + adjusted_x
+	return index
+
+func _sample_height(world_x: float, world_z: float) -> float:
+	var continentalness: float
+	var erosion: float
+	var peaks_and_valeys: float
+	var index = get_index_from_world_coords(world_x, world_z)
+
+	if index >= continentalness_data.size():
+		push_warning("Index out of bounds: index is ", index, " and data size is ", continentalness_data.size())
+		continentalness = config.continentalness.noise.get_noise_2d(world_x, world_z)
+		erosion = config.erosion.noise.get_noise_2d(world_x, world_z)
+		peaks_and_valeys = config.peaks_and_valeys.noise.get_noise_2d(world_x, world_z)
+	else:
+		continentalness = continentalness_data[index]
+		erosion = erosion_data[index]
+		peaks_and_valeys = peaks_and_valleys_data[index]
 
 	# var continentalness_normalized = (continentalness + 1.0) / 2.0
 	# erosion *= continentalness_normalized
 
-	var continentalness_height = config.continentalness_curve.sample(continentalness)
-	var peaks_and_valeys_height = config.peaks_and_valeys_curve.sample(peaks_and_valeys)
-	var erosion_height = config.erosion_curve.sample(erosion)
+	var continentalness_height = config.continentalness_curve.sample_baked(continentalness)
+	var peaks_and_valeys_height = config.peaks_and_valeys_curve.sample_baked(peaks_and_valeys)
+	var erosion_height = config.erosion_curve.sample_baked(erosion)
 	var height = continentalness_height + erosion_height + peaks_and_valeys_height
 	return height
 
-static func determine_biome(world_x: float, world_z: float) -> Biome:
-	var height = _sample_height(world_x, world_z)
-	var humidity = config.humidity.noise.get_noise_2d(world_x, world_z)
-	var temperature = config.temperature.noise.get_noise_2d(world_x, world_z)
-	var difficulty = config.difficulty.noise.get_noise_2d(world_x, world_z)
+# static version of _sample_height for use in other scripts
+static func sample_height(world_x: float, world_z: float) -> float:
+	var continentalness = config.continentalness.noise.get_noise_2d(world_x, world_z)
+	var erosion = config.erosion.noise.get_noise_2d(world_x, world_z)
+	var peaks_and_valeys = config.peaks_and_valeys.noise.get_noise_2d(world_x, world_z)
+	var continentalness_height = config.continentalness_curve.sample_baked(continentalness)
+	var peaks_and_valeys_height = config.peaks_and_valeys_curve.sample_baked(peaks_and_valeys)
+	var erosion_height = config.erosion_curve.sample_baked(erosion)
+	var height = continentalness_height + erosion_height + peaks_and_valeys_height
+	return height
 
+static func _get_best_biome(height: float, humidity: float, temperature: float, difficulty: float) -> Biome:
 	var best_biome: Biome = null
 	var best_score: float = -1.0
 
@@ -230,8 +294,23 @@ static func determine_biome(world_x: float, world_z: float) -> Biome:
 
 	return best_biome
 
+func _determine_biome(world_x: float, world_z: float) -> Biome:
+	var height = _sample_height(world_x, world_z)
+	var humidity = humidity_data[get_index_from_world_coords(world_x, world_z)]
+	var temperature = temperature_data[get_index_from_world_coords(world_x, world_z)]
+	var difficulty = difficulty_data[get_index_from_world_coords(world_x, world_z)]
+	return _get_best_biome(height, humidity, temperature, difficulty)
 
-static func _compute_normal(world_x: float, world_z: float) -> Vector3:
+# static version of _determine_biome for use in other scripts
+static func determine_biome(world_x: float, world_z: float) -> Biome:
+	var height = sample_height(world_x, world_z)
+	var humidity = config.humidity.noise.get_noise_2d(world_x, world_z)
+	var temperature = config.temperature.noise.get_noise_2d(world_x, world_z)
+	var difficulty = config.difficulty.noise.get_noise_2d(world_x, world_z)
+	return _get_best_biome(height, humidity, temperature, difficulty)
+
+
+func _compute_normal(world_x: float, world_z: float) -> Vector3:
 	var vertex_spacing = 1.0 / config.vertex_per_meter
 	# Get the heights of the neighboring vertices
 	var left = _sample_height(world_x, world_z)
@@ -286,11 +365,22 @@ func _generate_mesh() -> ArrayMesh:
 	st.set_custom_format(0, SurfaceTool.CUSTOM_RGB_FLOAT) # For continentalness, erosion, peaks_valleys
 	st.set_custom_format(1, SurfaceTool.CUSTOM_RGB_FLOAT) # For humidity, temperature, difficulty
 
+	# Precompute noise for extended grid (+1 vertex border)
+	var extended_vertex_count = vertex_count + 6
+	continentalness_data.resize(extended_vertex_count * extended_vertex_count)
+	erosion_data.resize(extended_vertex_count * extended_vertex_count)
+	peaks_and_valleys_data.resize(extended_vertex_count * extended_vertex_count)
+	humidity_data.resize(extended_vertex_count * extended_vertex_count)
+	temperature_data.resize(extended_vertex_count * extended_vertex_count)
+	difficulty_data.resize(extended_vertex_count * extended_vertex_count)
+
 	# Generate grid vertices with noise-based height
-	for z in range(vertex_count):
-		for x in range(vertex_count):
+	for z in range(-3, vertex_count + 3):
+		for x in range(-3, vertex_count + 3):
 			var world_x = (float(x) / config.vertex_per_meter) + (grid_position.x * size)
 			var world_z = (float(z) / config.vertex_per_meter) + (grid_position.y * size)
+
+			var index = (z + 3) * extended_vertex_count + (x + 3)
 
 			# Sample all noise values
 			var continentalness = config.continentalness.noise.get_noise_2d(world_x, world_z)
@@ -300,6 +390,15 @@ func _generate_mesh() -> ArrayMesh:
 			var temperature = config.temperature.noise.get_noise_2d(world_x, world_z)
 			var difficulty = config.difficulty.noise.get_noise_2d(world_x, world_z)
 
+			continentalness_data[index] = continentalness
+			erosion_data[index] = erosion
+			peaks_and_valleys_data[index] = peaks_valleys
+			humidity_data[index] = humidity
+			temperature_data[index] = temperature
+			difficulty_data[index] = difficulty
+
+			if x < 0 or x >= vertex_count or z < 0 or z >= vertex_count:
+				continue
 
 			var height = _sample_height(world_x, world_z)
 			height_data[z * vertex_count + x] = height
@@ -307,7 +406,7 @@ func _generate_mesh() -> ArrayMesh:
 			var uv = Vector2(float(x) / (vertex_count - 1), float(z) / (vertex_count - 1))
 			st.set_uv(uv)
 			var color := Color.PURPLE
-			var biome = determine_biome(world_x, world_z)
+			var biome = _determine_biome(world_x, world_z)
 			biome_data[z * vertex_count + x] = biome.id
 			if biome:
 				color = biome.color
@@ -387,6 +486,9 @@ func _instantiate_instances(feature: Feature, positions: Array) -> void:
 
 
 func _on_chunk_generated(data: Dictionary) -> void:
+
+	time_to_generate = Time.get_ticks_msec() - time_to_generate
+	#print("Chunk generated in ", time_to_generate, "ms")
 
 	generating = false
 	mesh_instance.mesh = data["mesh"]
