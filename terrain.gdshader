@@ -1,5 +1,5 @@
 shader_type spatial;
-render_mode world_vertex_coords, specular_toon, diffuse_toon;
+render_mode world_vertex_coords, specular_toon, diffuse_toon, skip_vertex_transform;
 
 // Maximum number of biomes
 const int MAX_BIOMES = 32;
@@ -18,6 +18,8 @@ uniform sampler2D gradient : source_color;
 
 varying vec3 noise_values1; // continentalness, erosion, peaks_valleys
 varying vec3 noise_values2; // humidity, temperature, difficulty
+varying vec3 world_position;
+varying vec3 world_normal;
 
 float calculate_biome_score(int biome_index, float height, float humidity, float temperature) {
     float score = 0.0;
@@ -59,11 +61,22 @@ float calculate_biome_score(int biome_index, float height, float humidity, float
 }
 
 void vertex() {
+    VERTEX = (MODELVIEW_MATRIX * vec4(VERTEX, 1.0)).xyz;
+    world_normal = NORMAL;
+    NORMAL = normalize((MODELVIEW_MATRIX * vec4(NORMAL, 0.0)).xyz);
+
     noise_values1 = CUSTOM0.rgb;
     noise_values2 = CUSTOM1.rgb;
+    world_position = VERTEX;
 }
 
 void fragment() {
+    vec3 local_normal = normalize(cross(dFdy(world_position), dFdx(world_position)));
+
+    mat3 model_matrix_inverse_transpose = inverse(transpose(mat3(MODEL_MATRIX)));
+    vec3 world_space_normal = normalize(model_matrix_inverse_transpose * local_normal);
+    vec3 view_space_normal = normalize(mat3(VIEW_MATRIX) * world_space_normal);
+
     float height = noise_values1.r;
     float humidity = noise_values1.g;
     float temperature = noise_values1.b;
@@ -80,7 +93,14 @@ void fragment() {
         }
     }
 
-    // Use the exact color of the best matching biome
+    // if (SCREEN_UV.x < 0.5) {
+    //     ALBEDO = world_normal;
+    // } else {
+    //     ALBEDO = biome_colors[best_biome];
+    // }
+
     ALBEDO = biome_colors[best_biome];
+
+    // Use the exact color of the best matching biome
 	BACKLIGHT = vec3(1.0);
 }

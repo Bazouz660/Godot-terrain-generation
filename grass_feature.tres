@@ -13,6 +13,6 @@ receive_biome_color = true
 shader_parameter_color_name = "albedo"
 random_scale = Vector2(1, 1)
 random_rotation = Vector2(0, 0)
-random_offset = Vector3(0.2, 0, 0.2)
+random_offset = Vector3(0.3, 0, 0.3)
 follow_normals = false
 metadata/_custom_type_script = ExtResource("2_6yllt")

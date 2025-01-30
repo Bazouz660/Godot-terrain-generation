@@ -4,11 +4,17 @@ class_name TerrainGenerator
 @export var config: TerrainConfig
 @export var origin: Node3D
 
+static var player_grid_position: Vector2i = Vector2i(0, 0)
+
 var terrain_chunks: Dictionary[Vector2i, TerrainChunk] = {}
 var timer := Timer.new()
 var current_thread_usage: int = 0
 var chunk_queue: Array[Vector2i] = []
 var queued_chunks: Dictionary[Vector2i, bool] = {}
+
+var max_refresh_queue_time: float = -1
+var max_load_time: float = -1
+var max_unload_time: float = -1
 
 func _ready():
 	config.setup()
@@ -53,19 +59,39 @@ func world_to_grid_position(world_position: Vector3) -> Vector2i:
 	)
 
 func _refresh_chunks():
-	var player_grid_position = world_to_grid_position(origin.global_transform.origin)
-	_unload_chunks(player_grid_position)
-	_load_chunks(player_grid_position)
-	_refresh_chunk_queue(player_grid_position)
+	player_grid_position = world_to_grid_position(origin.global_transform.origin)
+	var start_time = Time.get_ticks_msec()
+	_unload_chunks()
+	var end_time = Time.get_ticks_msec()
+	var time_ms = end_time - start_time
+	#print("Unload time: ", time_ms, "ms")
+	if time_ms > max_unload_time:
+		max_unload_time = time_ms
 
-func _unload_chunks(player_grid_position: Vector2i):
+	start_time = Time.get_ticks_msec()
+	_load_chunks()
+	end_time = Time.get_ticks_msec()
+	time_ms = end_time - start_time
+	#print("Load time: ", time_ms, "ms")
+	if time_ms > max_load_time:
+		max_load_time = time_ms
+
+	start_time = Time.get_ticks_msec()
+	_refresh_chunk_queue()
+	end_time = Time.get_ticks_msec()
+	time_ms = end_time - start_time
+	#print("Queue time: ", time_ms, "ms")
+	if time_ms > max_refresh_queue_time:
+		max_refresh_queue_time = time_ms
+
+func _unload_chunks():
 	var view_distance_sq = config.view_distance * config.view_distance
 	for chunk in terrain_chunks.values().duplicate():
 		var delta = chunk.grid_position - player_grid_position
 		if delta.x * delta.x + delta.y * delta.y > view_distance_sq and not chunk.generating:
 			_delete_chunk.call_deferred(chunk)
 
-func _load_chunks(player_grid_position: Vector2i):
+func _load_chunks():
 	var view_distance = config.view_distance
 	var view_distance_sq = view_distance * view_distance
 	for x in range(-view_distance, view_distance + 1):
@@ -79,7 +105,7 @@ func _load_chunks(player_grid_position: Vector2i):
 			if not terrain_chunks.has(check_position):
 				add_chunk_to_queue(check_position)
 
-func _refresh_chunk_queue(player_grid_position: Vector2i):
+func _refresh_chunk_queue():
 	var view_distance_sq = config.view_distance * config.view_distance
 
 	# Clean up out-of-range queued chunks
@@ -91,19 +117,26 @@ func _refresh_chunk_queue(player_grid_position: Vector2i):
 			queued_chunks.erase(grid_position)
 
 	# Sort queue by distance to player (closest first)
-	chunk_queue.sort_custom(func(a, b):
-		var delta_a = a - player_grid_position
-		var delta_b = b - player_grid_position
-		return delta_a.x * delta_a.x + delta_a.y * delta_a.y < delta_b.x * delta_b.x + delta_b.y * delta_b.y
-	)
+	chunk_queue.sort_custom(_sort_positions)
 
+func _sort_positions(a: Vector2i, b: Vector2i) -> int:
+	var delta_a = a - player_grid_position
+	var delta_b = b - player_grid_position
+	return delta_a.x * delta_a.x + delta_a.y * delta_a.y < delta_b.x * delta_b.x + delta_b.y * delta_b.y
+
+func _input(event):
+	if event is InputEventKey:
+		event = event as InputEventKey
+		if event.pressed and event.keycode == KEY_ESCAPE:
+			_exit_tree()
+			get_tree().quit()
 
 func _process(delta):
 	_process_chunk_queue()
 
-	var frame_time_ms = delta * 1000
-	if frame_time_ms > 8.0:
-		print("Frame time: ", frame_time_ms, "ms")
+	# var frame_time_ms = delta * 1000
+	# if frame_time_ms > 8.0:
+	# 	print("Frame time: ", frame_time_ms, "ms")
 
 	var label = %Label as Label
 	var world_pos := origin.global_transform.origin
@@ -139,3 +172,27 @@ func _process(delta):
 		+ "Height: " + height_str + "\n" \
 		+ "Y: " + y_str + "\n" \
 		+ "Biome: " + biome_str
+
+func _exit_tree():
+	print("Max unload time: ", max_unload_time, "ms")
+	print("Max load time: ", max_load_time, "ms")
+	print("Max refresh queue time: ", max_refresh_queue_time, "ms")
+	var generation_time_samples = TerrainChunk.generation_time_samples
+
+	var average_generation_time = 0
+	var median_generation_time = 0
+
+	if TerrainChunk.sample_array_filled:
+		for sample in generation_time_samples:
+			average_generation_time += sample
+		average_generation_time /= generation_time_samples.size()
+		median_generation_time = generation_time_samples[generation_time_samples.size() / 2]
+		print("Average generation time: ", average_generation_time, "ms, samples: ", generation_time_samples.size())
+		print("Median generation time: ", median_generation_time, "ms")
+	else:
+		for sample in range(TerrainChunk.sample_index):
+			average_generation_time += generation_time_samples[sample]
+		average_generation_time /= TerrainChunk.sample_index
+		median_generation_time = generation_time_samples[TerrainChunk.sample_index / 2]
+		print("Average generation time: ", average_generation_time, "ms, samples: ", TerrainChunk.sample_index)
+		print("Median generation time: ", median_generation_time, "ms")

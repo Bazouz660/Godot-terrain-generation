@@ -6,14 +6,19 @@ static var config: TerrainConfig
 var size: int
 var vertex_count: int # New variable to store number of vertices per side
 
+static var generation_time_samples: Array[float] = []
+static var sample_index: int = 0
+static var sample_array_filled: bool = false
+static var biomes_label_index: Dictionary[String, Biome] = {}
+static var biomes_index_label: Dictionary[int, Biome] = {}
+
 # private variables
 var mesh_instance: MeshInstance3D
 var water_mesh_instance: MeshInstance3D
 var grid_position: Vector2i
-var height_data: Array[float] = []
-var biome_data: Array[int] = []
-static var biomes_label_index: Dictionary[String, Biome] = {}
-static var biomes_index_label: Dictionary[int, Biome] = {}
+var height_data: PackedFloat32Array = []
+var biome_data: PackedInt32Array = []
+var task_id: int
 
 var continentalness_data: PackedFloat32Array
 var erosion_data: PackedFloat32Array
@@ -40,6 +45,7 @@ static var min_height: float = INF
 static func set_config(p_config: TerrainConfig) -> void:
 	config = p_config
 	biomes = config.biomes
+	generation_time_samples.resize(1000)
 	_setup_shader_parameters()
 
 static func _setup_shader_parameters():
@@ -86,43 +92,95 @@ func _funny_randf(from: float, to: float):
 
 func _generate_features_positions() -> Dictionary[Vector2i, Array]:
 	var positions: Dictionary[Vector2i, Array] = {}
-	var occupied_positions: Array[Vector2i] = []
 
-	var biome_index := 0
-	for biome in biomes:
+	# Pre-calculate constants
+	const CELL_SIZE := 0.25
+	var cells_per_side := int(size / CELL_SIZE)
+	var world_offset_x := grid_position.x * size
+	var world_offset_z := grid_position.y * size
+	var vertex_factor := CELL_SIZE * config.vertex_per_meter
+	var safe_vertex_count := vertex_count - 1
+
+	# Create a grid for position tracking
+	var grid_size := cells_per_side * cells_per_side
+	var occupied_grid := PackedByteArray()
+	occupied_grid.resize(grid_size)
+	occupied_grid.fill(0)
+
+	# Process biomes in parallel using a thread pool
+	for biome_index in range(biomes.size()):
+		var biome := biomes[biome_index]
 		var feature_index := 0
+
 		for feature_params in biome.features:
 			feature_params = feature_params as FeatureGenParams
 			var density = feature_params.density
-			var positions_list = []
-			for z in range(vertex_count):
-				for x in range(vertex_count):
 
-					if occupied_positions.find(Vector2i(x, z)) != -1:
-						continue
+			# Calculate target features more efficiently
+			var target_features := int((density / 300.0) * grid_size)
+			var max_attempts := target_features * 3
 
-					if biome_data[z * vertex_count + x] != biome_index:
-						continue
+			# Pre-allocate arrays for batch processing
+			var candidate_positions := []
+			candidate_positions.resize(target_features)
+			var valid_count := 0
 
-					var world_x = (float(x) / config.vertex_per_meter) + (grid_position.x * size)
-					var world_z = (float(z) / config.vertex_per_meter) + (grid_position.y * size)
-					if density > _funny_randf(0.0, 100.0):
-						var feature = feature_params.feature as Feature
-						var random_offset_x = _funny_randf(-feature.random_offset.x, feature.random_offset.x)
-						var random_offset_z = _funny_randf(-feature.random_offset.z, feature.random_offset.z)
-						var random_offset_y = _funny_randf(-feature.random_offset.y, feature.random_offset.y)
-						world_x += random_offset_x
-						world_z += random_offset_z
-						var height = get_interpolated_height_at_world_position(Vector3(world_x, 0.0, world_z))
-						height += random_offset_y
-						var pos = Vector3(world_x, height, world_z)
-						positions_list.append(pos)
-						occupied_positions.append(Vector2i(x, z))
+			# Generate all candidate positions at once
+			for _i in range(max_attempts):
+				if valid_count >= target_features:
+					break
 
-			if positions_list.size() > 0:
-				positions[Vector2i(biome_index, feature_index)] = positions_list
+				var cell_x := rng.randi() % cells_per_side
+				var cell_z := rng.randi() % cells_per_side
+				var grid_index := cell_z * cells_per_side + cell_x
+
+				# Skip if position is occupied
+				if occupied_grid[grid_index] == 1:
+					continue
+
+				# Convert to vertex space
+				var vertex_x := int(cell_x * vertex_factor)
+				var vertex_z := int(cell_z * vertex_factor)
+
+				# Skip edge cases
+				if vertex_x >= safe_vertex_count or vertex_z >= safe_vertex_count:
+					continue
+
+				# Calculate world position
+				var world_x := world_offset_x + (cell_x * CELL_SIZE) + rng.randf() * CELL_SIZE
+				var world_z := world_offset_z + (cell_z * CELL_SIZE) + rng.randf() * CELL_SIZE
+
+				# Fast biome check using vertex indices
+				var vertex_index := vertex_z * vertex_count + vertex_x
+				var corners := PackedInt32Array([
+					biome_data[vertex_index],
+					biome_data[vertex_index + 1],
+					biome_data[(vertex_z + 1) * vertex_count + vertex_x],
+					biome_data[(vertex_z + 1) * vertex_count + vertex_x + 1]
+				])
+
+				var valid_corners := corners.count(biome_index)
+
+				# Fast path: all corners match
+				if valid_corners == 4:
+					var height := get_interpolated_height_at_world_position(Vector3(world_x, 0.0, world_z))
+					candidate_positions[valid_count] = Vector3(world_x, height, world_z)
+					occupied_grid[grid_index] = 1
+					valid_count += 1
+					continue
+
+				# Edge case: some corners match, verify exact position
+				if valid_corners >= 2 and determine_biome(world_x, world_z).id == biome_index:
+					var height := get_interpolated_height_at_world_position(Vector3(world_x, 0.0, world_z))
+					candidate_positions[valid_count] = Vector3(world_x, height, world_z)
+					occupied_grid[grid_index] = 1
+					valid_count += 1
+
+			# Add valid positions to the result
+			if valid_count > 0:
+				positions[Vector2i(biome_index, feature_index)] = candidate_positions.slice(0, valid_count)
+
 			feature_index += 1
-		biome_index += 1
 
 	return positions
 
@@ -144,8 +202,14 @@ func generate():
 
 	time_to_generate = Time.get_ticks_msec()
 
+	if generating:
+		print("Chunk already generating")
+		return
+
+	#print("Generating chunk at ", grid_position)
+
 	generating = true
-	WorkerThreadPool.add_task(_generate)
+	task_id = WorkerThreadPool.add_task(_generate)
 
 func get_height_at_world_position(world_position: Vector3) -> float:
 	var local_position = world_position - global_transform.origin
@@ -310,22 +374,6 @@ static func determine_biome(world_x: float, world_z: float) -> Biome:
 	return _get_best_biome(height, humidity, temperature, difficulty)
 
 
-func _compute_normal(world_x: float, world_z: float) -> Vector3:
-	var vertex_spacing = 1.0 / config.vertex_per_meter
-	# Get the heights of the neighboring vertices
-	var left = _sample_height(world_x, world_z)
-	var right = _sample_height(world_x + 1, world_z)
-	var bottom = _sample_height(world_x, world_z + 1)
-	var top = _sample_height(world_x + 1, world_z + 1)
-
-	# Calculate the differences in height, accounting for vertex spacing
-	var dx = (right - left) / vertex_spacing
-	var dz = (bottom - top) / vertex_spacing
-
-	# Compute the normal vector
-	var normal = Vector3(-dx, 2.0, -dz).normalized()
-	return normal
-
 func _generate_water_mesh() -> PlaneMesh:
 	var mesh = PlaneMesh.new()
 	mesh.size = Vector2(size, size)
@@ -334,7 +382,7 @@ func _generate_water_mesh() -> PlaneMesh:
 	return mesh
 
 func _generate() -> void:
-	rng.seed = hash(config.world_seed + grid_position.x * grid_position.y)
+	rng.seed = hash(config.world_seed + hash(grid_position.x * grid_position.y))
 
 	height_data.resize(vertex_count * vertex_count)
 	biome_data.resize(vertex_count * vertex_count)
@@ -420,7 +468,7 @@ func _generate_mesh() -> ArrayMesh:
 			st.set_custom(0, Color(normalized_height, humidity, temperature))
 			st.set_custom(1, Color(difficulty, 0.0, 0.0))
 			st.set_color(color)
-			st.set_normal(_compute_normal(world_x, world_z))
+			#st.set_normal(_compute_normal(world_x, world_z))
 			st.add_vertex(vertex)
 
 	# Generate indices for triangles
@@ -434,6 +482,9 @@ func _generate_mesh() -> ArrayMesh:
 			st.add_index(i + 1)
 			st.add_index(i + vertex_count + 1)
 			st.add_index(i + vertex_count)
+
+	st.generate_normals()
+	st.generate_tangents()
 
 	return st.commit()
 
@@ -488,6 +539,15 @@ func _instantiate_instances(feature: Feature, positions: Array) -> void:
 func _on_chunk_generated(data: Dictionary) -> void:
 
 	time_to_generate = Time.get_ticks_msec() - time_to_generate
+
+	if sample_index >= 999:
+		sample_index = 0
+		sample_array_filled = true
+	else:
+		sample_index += 1
+
+	generation_time_samples[sample_index] = time_to_generate
+
 	#print("Chunk generated in ", time_to_generate, "ms")
 
 	generating = false
@@ -498,3 +558,7 @@ func _on_chunk_generated(data: Dictionary) -> void:
 	water_mesh_instance.position.y = config.sea_level
 
 	_instantiate_features(data["feature_positions"])
+
+func _exit_tree():
+	if !WorkerThreadPool.is_task_completed(task_id):
+		WorkerThreadPool.wait_for_task_completion(task_id)
