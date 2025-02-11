@@ -1,6 +1,6 @@
 [gd_resource type="ShaderMaterial" load_steps=8 format=3 uid="uid://exoos7a2asvc"]
 
-[ext_resource type="Shader" uid="uid://v5xijq05mg5a" path="res://water.gdshader" id="1_o12aa"]
+[ext_resource type="Shader" uid="uid://bpkvucpq0otll" path="res://water.gdshader" id="1_o12aa"]
 
 [sub_resource type="FastNoiseLite" id="FastNoiseLite_y6fc4"]
 seed = 70

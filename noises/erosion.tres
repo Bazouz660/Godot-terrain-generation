@@ -2,6 +2,6 @@
 
 [resource]
 noise_type = 3
-frequency = 0.0056
+frequency = 0.0126
 domain_warp_type = 1
 domain_warp_fractal_type = 0

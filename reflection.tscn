@@ -1,0 +1,179 @@
+[gd_scene load_steps=22 format=3 uid="uid://7v6h1jsruxl1"]
+
+[ext_resource type="Environment" uid="uid://csud4iprrfqkn" path="res://env.tres" id="1_3p3qi"]
+[ext_resource type="Material" uid="uid://exoos7a2asvc" path="res://water.tres" id="2_c6hqg"]
+[ext_resource type="PackedScene" uid="uid://ckxawl6bb6dvj" path="res://acacia_tree.tscn" id="2_fdeh7"]
+[ext_resource type="Material" uid="uid://ctxs8wxn1f1qy" path="res://sand.tres" id="4_gd4bo"]
+[ext_resource type="Texture2D" uid="uid://b55n7morbqfb6" path="res://addons/kenney_prototype_textures/dark/texture_02.png" id="4_kunpr"]
+[ext_resource type="Script" uid="uid://3v4h4sttwutf" path="res://camera.gd" id="5_kunpr"]
+[ext_resource type="PackedScene" uid="uid://bel1453ay4w38" path="res://penis.glb" id="6_sblak"]
+[ext_resource type="Script" uid="uid://be7ib8djs5n4e" path="res://camera_pivot.gd" id="7_ontx2"]
+[ext_resource type="PackedScene" uid="uid://b8mhr6qqbo0kv" path="res://house.glb" id="9_fg31h"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_kunpr"]
+no_depth_test = true
+albedo_color = Color(1, 0, 0, 1)
+
+[sub_resource type="PrismMesh" id="PrismMesh_kunpr"]
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_kunpr"]
+size = Vector2(40, 40)
+subdivide_width = 60
+subdivide_depth = 60
+
+[sub_resource type="ViewportTexture" id="ViewportTexture_3p3qi"]
+viewport_path = NodePath("SubViewport")
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_fdeh7"]
+resource_local_to_scene = true
+albedo_texture = SubResource("ViewportTexture_3p3qi")
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_c6hqg"]
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_ontx2"]
+size = Vector2(20, 20)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_d6p6h"]
+albedo_texture = ExtResource("4_kunpr")
+uv1_triplanar = true
+uv1_world_triplanar = true
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_c6hqg"]
+albedo_color = Color(0.821551, 0.000143791, 0.0198053, 1)
+
+[sub_resource type="SphereMesh" id="SphereMesh_fdeh7"]
+
+[sub_resource type="SphereShape3D" id="SphereShape3D_fdeh7"]
+
+[sub_resource type="CapsuleMesh" id="CapsuleMesh_gd4bo"]
+
+[node name="Node3D" type="Node3D"]
+
+[node name="SubViewport" type="SubViewport" parent="."]
+transparent_bg = true
+mesh_lod_threshold = 0.0
+anisotropic_filtering_level = 0
+canvas_item_default_texture_filter = 0
+size = Vector2i(1024, 1024)
+render_target_clear_mode = 1
+
+[node name="Node3D" type="Node3D" parent="SubViewport"]
+transform = Transform3D(1, 0, 0, 0, -4.37114e-08, -1, 0, 1, -4.37114e-08, 0, -0.98971, 0)
+
+[node name="ReflectionCamera" type="Camera3D" parent="SubViewport/Node3D"]
+unique_name_in_owner = true
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -5.91816e-08, -1.35392)
+environment = ExtResource("1_3p3qi")
+projection = 1
+current = true
+size = 40.0
+near = 0.116
+far = 50.0
+
+[node name="VisualizationMesh" type="MeshInstance3D" parent="SubViewport/Node3D/ReflectionCamera"]
+unique_name_in_owner = true
+transform = Transform3D(1, -4.37114e-08, 0, 8.35189e-23, 1.91069e-15, 1, -4.37114e-08, -1, 1.91069e-15, -1.16832, 3.26347, -6.39221)
+material_override = SubResource("StandardMaterial3D_kunpr")
+mesh = SubResource("PrismMesh_kunpr")
+skeleton = NodePath("../../../../MeshInstance3D3")
+
+[node name="WaterPlane" type="MeshInstance3D" parent="."]
+unique_name_in_owner = true
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.08155, 0.0219562)
+material_override = ExtResource("2_c6hqg")
+mesh = SubResource("PlaneMesh_kunpr")
+
+[node name="Acacia Tree" parent="." instance=ExtResource("2_fdeh7")]
+transform = Transform3D(-0.0284779, 0, 0.539249, 0, 0.54, 0, -0.539249, 0, -0.0284779, -10.2176, 1.65729, 0.255365)
+
+[node name="Acacia Tree2" parent="." instance=ExtResource("2_fdeh7")]
+transform = Transform3D(-0.478576, 0.051494, 0.244773, 0.0458456, 0.537539, -0.0234482, -0.245894, 0, -0.480766, -10.1484, 1.47993, 4.39207)
+
+[node name="Acacia Tree4" parent="." instance=ExtResource("2_fdeh7")]
+transform = Transform3D(0.0501977, 0.0191574, 0.53732, -0.073504, 0.534835, -0.0122019, -0.532614, -0.072005, 0.0523252, -5.56403, 1.54806, 10.1949)
+
+[node name="Acacia Tree3" parent="." instance=ExtResource("2_fdeh7")]
+transform = Transform3D(-0.478576, 0.051494, 0.244773, 0.0458456, 0.537539, -0.0234482, -0.245894, 0, -0.480766, -10.2337, 1.58976, 2.48533)
+
+[node name="MeshInstance3D2" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 5.09705, -16.2607)
+material_overlay = SubResource("StandardMaterial3D_fdeh7")
+mesh = SubResource("PlaneMesh_c6hqg")
+
+[node name="CSGBakedMeshInstance3D" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.015, 0, 0, 0, 1, -0.468079, 0.147465, 0.367189)
+material_override = ExtResource("4_gd4bo")
+mesh = SubResource("PlaneMesh_ontx2")
+
+[node name="CSGBox3D2" type="CSGBox3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -12.9371, 0.8311, 0.522381)
+material_overlay = SubResource("StandardMaterial3D_d6p6h")
+use_collision = true
+size = Vector3(5.94724, 1.34082, 26.1745)
+
+[node name="CSGBox3D3" type="CSGBox3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 12.184, 0.782639, 0.522381)
+material_overlay = SubResource("StandardMaterial3D_d6p6h")
+use_collision = true
+size = Vector3(5.94724, 1.2439, 26.1745)
+
+[node name="CSGBox3D4" type="CSGBox3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.737824, 0.782639, 11.7675)
+material_overlay = SubResource("StandardMaterial3D_d6p6h")
+use_collision = true
+size = Vector3(20.5768, 1.2439, 3.68418)
+
+[node name="CSGBox3D5" type="CSGBox3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.737824, 0.782639, -10.7708)
+material_overlay = SubResource("StandardMaterial3D_d6p6h")
+use_collision = true
+size = Vector3(20.5768, 1.2439, 3.68418)
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.714262, 0.150183, -0.683575, 0.515063, 0.548487, 0.658689, 0.473856, -0.822561, 0.314409, 0, 9.15536, 0)
+shadow_enabled = true
+
+[node name="MultiMeshInstance3D" type="MultiMeshInstance3D" parent="."]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = ExtResource("1_3p3qi")
+
+[node name="MeshInstance3D3" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -7.82021, 1.14792, 4.56478)
+material_override = SubResource("StandardMaterial3D_c6hqg")
+mesh = SubResource("SphereMesh_fdeh7")
+
+[node name="CharacterBody3D" type="CharacterBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10.9725, 2.63845, 0)
+script = ExtResource("5_kunpr")
+
+[node name="CameraPivot" type="Marker3D" parent="CharacterBody3D"]
+unique_name_in_owner = true
+transform = Transform3D(1, 0, 0, 0, 0.818561, 0.57442, 0, -0.57442, 0.818561, 0, 0, 0)
+script = ExtResource("7_ontx2")
+
+[node name="MainCamera" type="Camera3D" parent="CharacterBody3D/CameraPivot"]
+unique_name_in_owner = true
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 20)
+projection = 1
+current = true
+size = 10.815
+near = 0.001
+far = 200.0
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="CharacterBody3D"]
+shape = SubResource("SphereShape3D_fdeh7")
+disabled = true
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="CharacterBody3D"]
+mesh = SubResource("CapsuleMesh_gd4bo")
+
+[node name="Sketchfab_Scene" parent="." instance=ExtResource("6_sblak")]
+transform = Transform3D(4.44724, 0, 2.28518, 0, 5, 0, -2.28518, 0, 4.44724, -10.452, 1.51077, -5.50476)
+
+[node name="house" parent="." instance=ExtResource("9_fg31h")]
+transform = Transform3D(-0.0429742, 0, 0.999076, 0, 1, 0, -0.999076, 0, -0.0429742, 0.338903, 1.40459, 11.6509)
+
+[node name="test" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, -4.37114e-08, -1, 0, 1, -4.37114e-08, -0.35, -1150.99, 0.49995)
+fov = 1.0

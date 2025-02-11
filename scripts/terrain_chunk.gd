@@ -381,38 +381,7 @@ func _generate_water_mesh() -> PlaneMesh:
 	mesh.subdivide_width = vertex_count - 1
 	return mesh
 
-func _generate() -> void:
-	rng.seed = hash(config.world_seed + hash(grid_position.x * grid_position.y))
-
-	height_data.resize(vertex_count * vertex_count)
-	biome_data.resize(vertex_count * vertex_count)
-
-	var mesh = _generate_mesh()
-	var water_mesh = _generate_water_mesh()
-	var feature_positions: Dictionary[Vector2i, Array] = _generate_features_positions()
-
-	var data = {
-		"mesh": mesh,
-		"water_mesh": water_mesh,
-		"feature_positions": feature_positions
-	}
-
-	_generated.emit.call_deferred(data)
-	generated.emit.call_deferred(grid_position)
-
-# normalizes noise values from -1 to 1 to 0 to 1
-static func normalize_noise_value(value: float) -> float:
-	return (value + 1.0) / 2.0
-
-func _generate_mesh() -> ArrayMesh:
-	var vertex_spacing = 1.0 / config.vertex_per_meter
-
-	var st = SurfaceTool.new()
-	st.begin(Mesh.PRIMITIVE_TRIANGLES)
-
-	st.set_custom_format(0, SurfaceTool.CUSTOM_RGB_FLOAT) # For continentalness, erosion, peaks_valleys
-	st.set_custom_format(1, SurfaceTool.CUSTOM_RGB_FLOAT) # For humidity, temperature, difficulty
-
+func _generate_noise_data():
 	# Precompute noise for extended grid (+1 vertex border)
 	var extended_vertex_count = vertex_count + 6
 	continentalness_data.resize(extended_vertex_count * extended_vertex_count)
@@ -450,14 +419,67 @@ func _generate_mesh() -> ArrayMesh:
 
 			var height = _sample_height(world_x, world_z)
 			height_data[z * vertex_count + x] = height
+			var biome = _determine_biome(world_x, world_z)
+			biome_data[z * vertex_count + x] = biome.id
+
+
+func _generate() -> void:
+	rng.seed = hash(config.world_seed + hash(grid_position.x * grid_position.y))
+
+	height_data.resize(vertex_count * vertex_count)
+	biome_data.resize(vertex_count * vertex_count)
+
+	_generate_noise_data()
+
+	var mesh = _generate_mesh()
+	var water_mesh = _generate_water_mesh()
+	var feature_positions: Dictionary[Vector2i, Array] = _generate_features_positions()
+
+	var data = {
+		"mesh": mesh,
+		"water_mesh": water_mesh,
+		"feature_positions": feature_positions
+	}
+
+	_generated.emit.call_deferred(data)
+	generated.emit.call_deferred(grid_position)
+
+# normalizes noise values from -1 to 1 to 0 to 1
+static func normalize_noise_value(value: float) -> float:
+	return (value + 1.0) / 2.0
+
+func _generate_mesh() -> ArrayMesh:
+	var vertex_spacing = 1.0 / config.vertex_per_meter
+
+	var st = SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+
+	st.set_custom_format(0, SurfaceTool.CUSTOM_RGB_FLOAT) # For continentalness, erosion, peaks_valleys
+	st.set_custom_format(1, SurfaceTool.CUSTOM_RGB_FLOAT) # For humidity, temperature, difficulty
+
+	# Precompute noise for extended grid (+1 vertex border)
+	var extended_vertex_count = vertex_count + 6
+
+	# Generate grid vertices with noise-based height
+	for z in range(-3, vertex_count + 3):
+		for x in range(-3, vertex_count + 3):
+
+			var index = (z + 3) * extended_vertex_count + (x + 3)
+
+			var humidity := humidity_data[index]
+			var temperature := temperature_data[index]
+			var difficulty := difficulty_data[index]
+
+			if x < 0 or x >= vertex_count or z < 0 or z >= vertex_count:
+				continue
+
+			var height := height_data[z * vertex_count + x]
 			var vertex = Vector3(x * vertex_spacing, height, z * vertex_spacing)
 			var uv = Vector2(float(x) / (vertex_count - 1), float(z) / (vertex_count - 1))
 			st.set_uv(uv)
 			var color := Color.PURPLE
-			var biome = _determine_biome(world_x, world_z)
-			biome_data[z * vertex_count + x] = biome.id
-			if biome:
-				color = biome.color
+			var biome = biome_data[z * vertex_count + x]
+			color = biomes[biome].color
 
 			# Store in custom attributes (RGB format)
 			st.set_custom(0, color)
