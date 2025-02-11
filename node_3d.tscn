@@ -1,4 +1,4 @@
-[gd_scene load_steps=66 format=3 uid="uid://fxtibbpha2uy"]
+[gd_scene load_steps=68 format=3 uid="uid://fxtibbpha2uy"]
 
 [ext_resource type="Script" uid="uid://yo6o0dnaokx1" path="res://scripts/terrain_generator.gd" id="1_a202f"]
 [ext_resource type="Script" uid="uid://b4qygo0dkkp2g" path="res://scripts/terrain_config.gd" id="2_a0tk4"]
@@ -23,6 +23,7 @@
 [ext_resource type="FastNoiseLite" uid="uid://neh0047ipvn2" path="res://noises/temperature.tres" id="8_6iypd"]
 [ext_resource type="Texture2D" uid="uid://1ckqtmvy3jxf" path="res://temp_gradient.tres" id="11_tcnuu"]
 [ext_resource type="Script" uid="uid://b02w2bpqigy00" path="res://scripts/structure_gen_params.gd" id="19_lggff"]
+[ext_resource type="PackedScene" uid="uid://b8mh1ychevxyh" path="res://structures/house.tscn" id="20_s0gvp"]
 
 [sub_resource type="Resource" id="Resource_i5arm"]
 script = ExtResource("2_r3fl7")
@@ -123,7 +124,7 @@ script = ExtResource("2_r3fl7")
 label = "Swamp"
 id = 4
 color = Color(1.05888e-06, 0.425975, 0.257865, 1)
-height_range = Vector2(9, 15)
+height_range = Vector2(10, 15)
 strict_height = true
 humidity_range = Vector2(0.65, 1)
 temperature_range = Vector2(0.2, 0.5)
@@ -264,7 +265,7 @@ normalize = false
 noise = ExtResource("3_i5arm")
 
 [sub_resource type="Curve" id="Curve_a0tk4"]
-_limits = [0.0, 25.0, -1.0, 1.0]
+_limits = [0.0, 50.0, -1.0, 1.0]
 _data = [Vector2(-1, 0), 0.0, 0.0, 0, 0, Vector2(-0.305122, 3.9629), 0.0, 0.0, 0, 0, Vector2(0.113586, 10.5396), 0.0, 0.0, 0, 0, Vector2(0.585746, 13.2799), 13.4575, 13.4575, 0, 0, Vector2(0.995546, 17.9384), 0.0, 0.0, 0, 0]
 point_count = 5
 
@@ -277,8 +278,8 @@ normalize = false
 noise = ExtResource("4_4arys")
 
 [sub_resource type="Curve" id="Curve_6iypd"]
-_limits = [0.0, 80.0, -1.0, 1.0]
-_data = [Vector2(-1, 61.1467), 0.0, -8.94834, 0, 0, Vector2(-0.875278, 51.0624), -143.173, -143.173, 0, 0, Vector2(-0.706013, 29.7511), 14.5322, 14.5322, 0, 0, Vector2(-0.52784, 40.9781), 0.0, 0.0, 0, 0, Vector2(-0.282851, 12.4789), -42.5046, -42.5046, 0, 0, Vector2(0.186641, 5.7467), 0.0, 0.0, 0, 0, Vector2(0.503326, 12.9174), 60.7553, 60.7553, 0, 0, Vector2(0.634744, 19.0556), -10.4601, -10.4601, 0, 0, Vector2(0.723831, 14.6712), -87.5004, -87.5004, 0, 0, Vector2(0.874263, 4.08126), 0.0, 0.0, 0, 0, Vector2(1, 0), 0.0, 0.0, 0, 0]
+_limits = [0.0, 61.1467, -1.0, 1.0]
+_data = [Vector2(-1, 61.1467), 0.0, -8.94834, 0, 0, Vector2(-0.875278, 51.0624), -143.173, -143.173, 0, 0, Vector2(-0.706013, 29.7511), 0.953498, 0.953498, 0, 0, Vector2(-0.505568, 20.5971), -34.7237, -34.7237, 0, 0, Vector2(-0.282851, 12.4789), -42.5046, -42.5046, 0, 0, Vector2(0.186641, 5.7467), 0.0, 0.0, 0, 0, Vector2(0.503326, 12.9174), 60.7553, 60.7553, 0, 0, Vector2(0.634744, 19.0556), -10.4601, -10.4601, 0, 0, Vector2(0.723831, 14.6712), -87.5004, -87.5004, 0, 0, Vector2(0.874263, 4.08126), 0.0, 0.0, 0, 0, Vector2(1, 0), 0.0, 0.0, 0, 0]
 point_count = 11
 
 [sub_resource type="NoiseTexture2D" id="NoiseTexture2D_wlxy5"]
@@ -308,6 +309,17 @@ _limits = [-30.0, 50.0, -1.0, 1.0]
 _data = [Vector2(-1, 0.455311), 0.0, 0.0, 0, 0, Vector2(-0.848552, 7.90894), 0.0, 0.0, 0, 0, Vector2(-0.652561, -1.29848), -4.27963, -4.27963, 0, 0, Vector2(0.100223, -3.49073), 0.0, 0.0, 0, 0, Vector2(0.694013, -10.6376), -41.5206, -41.5206, 0, 0, Vector2(1, -20.2349), -1.18923, 0.0, 0, 0]
 point_count = 6
 
+[sub_resource type="Resource" id="Resource_2mu51"]
+script = ExtResource("19_lggff")
+structure = ExtResource("20_s0gvp")
+difficulty_min = -1.0
+difficulty_max = 1.0
+loot_rarity = 0.0
+loot_amount = 0
+danger_level = 0
+density = 0.1
+metadata/_custom_type_script = ExtResource("19_lggff")
+
 [sub_resource type="NoiseTexture2D" id="NoiseTexture2D_tcnuu"]
 normalize = false
 noise = ExtResource("8_6iypd")
@@ -334,7 +346,7 @@ material = SubResource("ShaderMaterial_cdqbm")
 water_material = ExtResource("4_jka67")
 sea_level = 10.0
 biomes = Array[ExtResource("2_r3fl7")]([SubResource("Resource_i5arm"), SubResource("Resource_obt1j"), SubResource("Resource_jsk3o"), SubResource("Resource_imku0"), SubResource("Resource_6iypd"), SubResource("Resource_r3fl7"), SubResource("Resource_tereu"), SubResource("Resource_cdqbm"), SubResource("Resource_4arys"), SubResource("Resource_tuemg"), SubResource("Resource_i0g27")])
-structures = Array[ExtResource("19_lggff")]([])
+structures = Array[ExtResource("19_lggff")]([SubResource("Resource_2mu51")])
 metadata/_custom_type_script = ExtResource("2_a0tk4")
 
 [sub_resource type="SphereShape3D" id="SphereShape3D_noarx"]

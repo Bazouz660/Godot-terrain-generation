@@ -117,6 +117,7 @@ func _refresh_chunk_queue():
 			queued_chunks.erase(grid_position)
 
 	# Sort queue by distance to player (closest first)
+	# This has a big impact on performance, I will need to find a better way to do this
 	chunk_queue.sort_custom(_sort_positions)
 
 func _sort_positions(a: Vector2i, b: Vector2i) -> int:
@@ -128,7 +129,6 @@ func _input(event):
 	if event is InputEventKey:
 		event = event as InputEventKey
 		if event.pressed and event.keycode == KEY_ESCAPE:
-			_exit_tree()
 			get_tree().quit()
 
 func _process(delta):

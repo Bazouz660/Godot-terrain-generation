@@ -7,6 +7,7 @@ var size: int
 var vertex_count: int # New variable to store number of vertices per side
 
 static var generation_time_samples: Array[float] = []
+static var max_samples: int = 1000
 static var sample_index: int = 0
 static var sample_array_filled: bool = false
 static var biomes_label_index: Dictionary[String, Biome] = {}
@@ -27,6 +28,17 @@ var humidity_data: PackedFloat32Array
 var temperature_data: PackedFloat32Array
 var difficulty_data: PackedFloat32Array
 
+# Pre-calculate constants
+const CELL_SIZE := 0.25
+var cells_per_side: int
+var world_offset_x: float
+var world_offset_z: float
+var vertex_factor: float
+var safe_vertex_count: int
+# Create a grid for position tracking
+var grid_size: int
+var occupied_grid: PackedByteArray
+
 var time_to_generate
 
 # public variables
@@ -45,7 +57,7 @@ static var min_height: float = INF
 static func set_config(p_config: TerrainConfig) -> void:
 	config = p_config
 	biomes = config.biomes
-	generation_time_samples.resize(1000)
+	generation_time_samples.resize(max_samples)
 	_setup_shader_parameters()
 
 static func _setup_shader_parameters():
@@ -92,20 +104,6 @@ func _funny_randf(from: float, to: float):
 
 func _generate_features_positions() -> Dictionary[Vector2i, Array]:
 	var positions: Dictionary[Vector2i, Array] = {}
-
-	# Pre-calculate constants
-	const CELL_SIZE := 0.25
-	var cells_per_side := int(size / CELL_SIZE)
-	var world_offset_x := grid_position.x * size
-	var world_offset_z := grid_position.y * size
-	var vertex_factor := CELL_SIZE * config.vertex_per_meter
-	var safe_vertex_count := vertex_count - 1
-
-	# Create a grid for position tracking
-	var grid_size := cells_per_side * cells_per_side
-	var occupied_grid := PackedByteArray()
-	occupied_grid.resize(grid_size)
-	occupied_grid.fill(0)
 
 	# Process biomes in parallel using a thread pool
 	for biome_index in range(biomes.size()):
@@ -188,6 +186,15 @@ func _init(p_grid_position: Vector2i):
 	size = config.chunk_size
 	vertex_count = int(size * config.vertex_per_meter) + 1 # Calculate vertices based on density
 	grid_position = p_grid_position
+	cells_per_side = int(size / CELL_SIZE)
+	world_offset_x = grid_position.x * size
+	world_offset_z = grid_position.y * size
+	vertex_factor = CELL_SIZE * config.vertex_per_meter
+	safe_vertex_count = vertex_count - 1
+	grid_size = cells_per_side * cells_per_side
+	occupied_grid = PackedByteArray()
+	occupied_grid.resize(grid_size)
+	occupied_grid.fill(0)
 
 func _ready():
 	_generated.connect(_on_chunk_generated)
@@ -544,25 +551,27 @@ func _instantiate_multimesh(biome: Biome, feature: Feature, positions: Array) ->
 			material_duplicated.set_shader_parameter(feature.shader_parameter_color_name, biome.color)
 			multimesh_instance.material_override = material_duplicated
 
-
 	add_child(multimesh_instance)
 	multimesh_instance.global_transform.origin = Vector3(0.0, 0.0, 0.0)
 
 func _instantiate_instances(feature: Feature, positions: Array) -> void:
 	for pos in positions:
-		var instance := feature.scene.instantiate() as Node3D
-		add_child(instance)
-		instance.global_position = pos
-		instance.global_rotation = Vector3(0.0, deg_to_rad(_funny_randf(feature.random_rotation.x, feature.random_rotation.y)), 0.0)
-		var random_scale = _funny_randf(feature.random_scale.x, feature.random_scale.y)
-		instance.scale = Vector3(random_scale, random_scale, random_scale)
+		_instantiate_feature(feature, pos)
+
+func _instantiate_feature(feature: Feature, p_position: Vector3) -> void:
+	var instance := feature.scene.instantiate() as Node3D
+	add_child(instance)
+	instance.global_position = p_position
+	instance.global_rotation = Vector3(0.0, deg_to_rad(_funny_randf(feature.random_rotation.x, feature.random_rotation.y)), 0.0)
+	var random_scale = _funny_randf(feature.random_scale.x, feature.random_scale.y)
+	instance.scale = Vector3(random_scale, random_scale, random_scale)
 
 
 func _on_chunk_generated(data: Dictionary) -> void:
 
 	time_to_generate = Time.get_ticks_msec() - time_to_generate
 
-	if sample_index >= 999:
+	if sample_index >= max_samples - 1:
 		sample_index = 0
 		sample_array_filled = true
 	else:
