@@ -1,19 +1,26 @@
 extends Node3D
 class_name TerrainChunk
 
-# import variables
+# --- Static Variables & Configuration ---
 static var config: TerrainConfig
-var size: int
-var vertex_count: int # New variable to store number of vertices per side
-
 static var generation_time_samples: Array[float] = []
 static var max_samples: int = 1000
 static var sample_index: int = 0
 static var sample_array_filled: bool = false
 static var biomes_label_index: Dictionary[String, Biome] = {}
 static var biomes_index_label: Dictionary[int, Biome] = {}
+static var biomes: Array[Biome]
+static var max_height: float = -INF
+static var min_height: float = INF
 
-# private variables
+# --- Constants ---
+const CELL_SIZE: float = 0.25
+
+# --- Public Instance Variables ---
+var generating: bool = false
+var rng: RandomNumberGenerator = RandomNumberGenerator.new()
+
+# --- Private Instance Variables ---
 var mesh_instance: MeshInstance3D
 var water_mesh_instance: MeshInstance3D
 var grid_position: Vector2i
@@ -28,32 +35,23 @@ var humidity_data: PackedFloat32Array
 var temperature_data: PackedFloat32Array
 var difficulty_data: PackedFloat32Array
 
-# Pre-calculate constants
-const CELL_SIZE := 0.25
+# Pre-calculated constants (set in _init)
+var size: int
+var vertex_count: int
 var cells_per_side: int
 var world_offset_x: float
 var world_offset_z: float
 var vertex_factor: float
 var safe_vertex_count: int
-# Create a grid for position tracking
 var grid_size: int
 var occupied_grid: PackedByteArray
-
 var time_to_generate
 
-# public variables
-var generating: bool = false
-
-var rng := RandomNumberGenerator.new()
-
+# --- Signals ---
 signal _generated(meshes: Dictionary)
 signal generated(position: Vector2i)
 
-static var biomes: Array[Biome]
-
-static var max_height: float = -INF
-static var min_height: float = INF
-
+# --- Static Methods ---
 static func set_config(p_config: TerrainConfig) -> void:
 	config = p_config
 	biomes = config.biomes
@@ -63,7 +61,6 @@ static func set_config(p_config: TerrainConfig) -> void:
 static func _setup_shader_parameters():
 	var shader_material = config.material
 
-	# Convert biome data to arrays for the shader
 	var colors: Array[Color] = []
 	var height_ranges: Array[Vector2] = []
 	var humidity_ranges: Array[Vector2] = []
@@ -79,7 +76,7 @@ static func _setup_shader_parameters():
 		difficulty_ranges.append(biome.difficulty_range)
 		strict_height.append(biome.strict_height)
 
-		# add to index
+		# Build lookup tables
 		biomes_label_index[biome.label] = biome
 		biomes_index_label[biome.id] = biome
 
@@ -98,89 +95,14 @@ static func _setup_shader_parameters():
 	shader_material.set_shader_parameter("min_height", min_height)
 	shader_material.set_shader_parameter("strict_height", strict_height)
 
+static func sample_height(world_x: float, world_z: float) -> float:
+	# Delegate to the TerrainNoise module’s static function.
+	return TerrainChunkNoise.sample_height(world_x, world_z)
 
-func _funny_randf(from: float, to: float):
-	return rng.randf_range(from, to)
+static func normalize_noise_value(value: float) -> float:
+	return (value + 1.0) / 2.0
 
-func _generate_features_positions() -> Dictionary[Vector2i, Array]:
-	var positions: Dictionary[Vector2i, Array] = {}
-
-	# Process biomes in parallel using a thread pool
-	for biome_index in range(biomes.size()):
-		var biome := biomes[biome_index]
-		var feature_index := 0
-
-		for feature_params in biome.features:
-			feature_params = feature_params as FeatureGenParams
-			var density = feature_params.density
-
-			# Calculate target features more efficiently
-			var target_features := int((density / 300.0) * grid_size)
-			var max_attempts := target_features * 3
-
-			# Pre-allocate arrays for batch processing
-			var candidate_positions := []
-			candidate_positions.resize(target_features)
-			var valid_count := 0
-
-			# Generate all candidate positions at once
-			for _i in range(max_attempts):
-				if valid_count >= target_features:
-					break
-
-				var cell_x := rng.randi() % cells_per_side
-				var cell_z := rng.randi() % cells_per_side
-				var grid_index := cell_z * cells_per_side + cell_x
-
-				# Skip if position is occupied
-				if occupied_grid[grid_index] == 1:
-					continue
-
-				# Convert to vertex space
-				var vertex_x := int(cell_x * vertex_factor)
-				var vertex_z := int(cell_z * vertex_factor)
-
-				# Skip edge cases
-				if vertex_x >= safe_vertex_count or vertex_z >= safe_vertex_count:
-					continue
-
-				# Calculate world position
-				var world_x := world_offset_x + (cell_x * CELL_SIZE) + rng.randf() * CELL_SIZE
-				var world_z := world_offset_z + (cell_z * CELL_SIZE) + rng.randf() * CELL_SIZE
-
-				# Fast biome check using vertex indices
-				var vertex_index := vertex_z * vertex_count + vertex_x
-				var corners := PackedInt32Array([
-					biome_data[vertex_index],
-					biome_data[vertex_index + 1],
-					biome_data[(vertex_z + 1) * vertex_count + vertex_x],
-					biome_data[(vertex_z + 1) * vertex_count + vertex_x + 1]
-				])
-
-				var valid_corners := corners.count(biome_index)
-
-				# Fast path: all corners match
-				if valid_corners == 4:
-					var height := get_interpolated_height_at_world_position(Vector3(world_x, 0.0, world_z))
-					candidate_positions[valid_count] = Vector3(world_x, height, world_z)
-					occupied_grid[grid_index] = 1
-					valid_count += 1
-					continue
-
-				# Edge case: some corners match, verify exact position
-				if valid_corners >= 2 and determine_biome(world_x, world_z).id == biome_index:
-					var height := get_interpolated_height_at_world_position(Vector3(world_x, 0.0, world_z))
-					candidate_positions[valid_count] = Vector3(world_x, height, world_z)
-					occupied_grid[grid_index] = 1
-					valid_count += 1
-
-			# Add valid positions to the result
-			if valid_count > 0:
-				positions[Vector2i(biome_index, feature_index)] = candidate_positions.slice(0, valid_count)
-
-			feature_index += 1
-
-	return positions
+# --- Instance Methods ---
 
 func _init(p_grid_position: Vector2i):
 	size = config.chunk_size
@@ -206,15 +128,10 @@ func _ready():
 	add_child(mesh_instance)
 
 func generate():
-
 	time_to_generate = Time.get_ticks_msec()
-
 	if generating:
 		print("Chunk already generating")
 		return
-
-	#print("Generating chunk at ", grid_position)
-
 	generating = true
 	task_id = WorkerThreadPool.add_task(_generate)
 
@@ -227,24 +144,16 @@ func get_height_at_world_position(world_position: Vector3) -> float:
 	return height_data[z * vertex_count + x]
 
 func get_interpolated_height_at_world_position(world_position: Vector3) -> float:
-	# Get the floor of the coordinates
 	var x_floor: float = floor(world_position.x)
 	var z_floor: float = floor(world_position.z)
-
-	# Sample heights at the four corners
-	var h00 := _sample_height(x_floor, z_floor)
-	var h01 := _sample_height(x_floor + 1.0, z_floor)
-	var h10 := _sample_height(x_floor, z_floor + 1.0)
-	var h11 := _sample_height(x_floor + 1.0, z_floor + 1.0)
-
-	# Calculate interpolation ratios
-	var x_ratio := world_position.x - x_floor
-	var z_ratio := world_position.z - z_floor
-
-	# Perform bilinear interpolation
+	var h00 = _sample_height(x_floor, z_floor)
+	var h01 = _sample_height(x_floor + 1.0, z_floor)
+	var h10 = _sample_height(x_floor, z_floor + 1.0)
+	var h11 = _sample_height(x_floor + 1.0, z_floor + 1.0)
+	var x_ratio = world_position.x - x_floor
+	var z_ratio = world_position.z - z_floor
 	var h0: float = lerp(h00, h01, x_ratio)
 	var h1: float = lerp(h10, h11, x_ratio)
-
 	return lerp(h0, h1, z_ratio)
 
 func _get_local_coords(world_position: Vector2) -> Vector2i:
@@ -266,329 +175,84 @@ func _1d_to_2d(index: int) -> Vector2:
 	return Vector2(x, y)
 
 func get_index_from_world_coords(world_x: float, world_z: float) -> int:
-	# Step 1: Calculate local coordinates
 	var local_x = world_x - (grid_position.x * size)
 	var local_z = world_z - (grid_position.y * size)
-
-	# Step 2: Convert local coordinates to vertex indices
 	var x = int(local_x * config.vertex_per_meter)
 	var z = int(local_z * config.vertex_per_meter)
-
-	# Step 3: Adjust for the offset
 	var adjusted_x = x + 3
 	var adjusted_z = z + 3
-
-	# Step 4: Calculate the index
 	var extended_vertex_count = vertex_count + 6
-	var index = adjusted_z * extended_vertex_count + adjusted_x
-	return index
+	return adjusted_z * extended_vertex_count + adjusted_x
 
 func _sample_height(world_x: float, world_z: float) -> float:
-	var continentalness: float
-	var erosion: float
-	var peaks_and_valeys: float
-	var index = get_index_from_world_coords(world_x, world_z)
-
-	if index >= continentalness_data.size():
-		push_warning("Index out of bounds: index is ", index, " and data size is ", continentalness_data.size())
-		continentalness = config.continentalness.noise.get_noise_2d(world_x, world_z)
-		erosion = config.erosion.noise.get_noise_2d(world_x, world_z)
-		peaks_and_valeys = config.peaks_and_valeys.noise.get_noise_2d(world_x, world_z)
-	else:
-		continentalness = continentalness_data[index]
-		erosion = erosion_data[index]
-		peaks_and_valeys = peaks_and_valleys_data[index]
-
-	# var continentalness_normalized = (continentalness + 1.0) / 2.0
-	# erosion *= continentalness_normalized
-
-	var continentalness_height = config.continentalness_curve.sample_baked(continentalness)
-	var peaks_and_valeys_height = config.peaks_and_valeys_curve.sample_baked(peaks_and_valeys)
-	var erosion_height = config.erosion_curve.sample_baked(erosion)
-	var height = continentalness_height + erosion_height + peaks_and_valeys_height
-	return height
-
-# static version of _sample_height for use in other scripts
-static func sample_height(world_x: float, world_z: float) -> float:
-	var continentalness = config.continentalness.noise.get_noise_2d(world_x, world_z)
-	var erosion = config.erosion.noise.get_noise_2d(world_x, world_z)
-	var peaks_and_valeys = config.peaks_and_valeys.noise.get_noise_2d(world_x, world_z)
-	var continentalness_height = config.continentalness_curve.sample_baked(continentalness)
-	var peaks_and_valeys_height = config.peaks_and_valeys_curve.sample_baked(peaks_and_valeys)
-	var erosion_height = config.erosion_curve.sample_baked(erosion)
-	var height = continentalness_height + erosion_height + peaks_and_valeys_height
-	return height
-
-static func _get_best_biome(height: float, humidity: float, temperature: float, difficulty: float) -> Biome:
-	var best_biome: Biome = null
-	var best_score: float = -1.0
-
-	for b in biomes:
-		var score = 0.0
-
-		# Calculate score for height
-		var height_diff = abs(height - (b.height_range.x + b.height_range.y) / 2.0)
-		var height_range = (b.height_range.y - b.height_range.x) / 2.0
-		var height_score = 1.0 - (height_diff / height_range)
-		if height_score < 0:
-			height_score *= 20.0 # Penalize more for being out of range
-		score += height_score
-
-		# Calculate score for humidity
-		var humidity_diff = abs(humidity - (b.humidity_range.x + b.humidity_range.y) / 2.0)
-		var humidity_range = (b.humidity_range.y - b.humidity_range.x) / 2.0
-		var humidity_score = 1.0 - (humidity_diff / humidity_range)
-		if humidity_score < 0:
-			humidity_score *= 2.0 # Penalize more for being out of range
-		score += humidity_score
-
-		# Calculate score for temperature
-		var temperature_diff = abs(temperature - (b.temperature_range.x + b.temperature_range.y) / 2.0)
-		var temperature_range = (b.temperature_range.y - b.temperature_range.x) / 2.0
-		var temperature_score = 1.0 - (temperature_diff / temperature_range)
-		if temperature_score < 0:
-			temperature_score *= 2.0 # Penalize more for being out of range
-		score += temperature_score
-
-		# Calculate score for difficulty
-		var difficulty_diff = abs(difficulty - (b.difficulty_range.x + b.difficulty_range.y) / 2.0)
-		var difficulty_range = (b.difficulty_range.y - b.difficulty_range.x) / 2.0
-		var difficulty_score = 1.0 - (difficulty_diff / difficulty_range)
-		if difficulty_score < 0:
-			difficulty_score *= 2.0 # Penalize more for being out of range
-		score += difficulty_score
-
-		# Update best biome if current biome has a higher score
-		if score > best_score:
-			best_score = score
-			best_biome = b
-
-	return best_biome
+	# Delegate to the TerrainNoise module passing self for access to instance data.
+	return TerrainChunkNoise._sample_height(self, world_x, world_z)
 
 func _determine_biome(world_x: float, world_z: float) -> Biome:
-	var height = _sample_height(world_x, world_z)
-	var humidity = humidity_data[get_index_from_world_coords(world_x, world_z)]
-	var temperature = temperature_data[get_index_from_world_coords(world_x, world_z)]
-	var difficulty = difficulty_data[get_index_from_world_coords(world_x, world_z)]
-	return _get_best_biome(height, humidity, temperature, difficulty)
+	return TerrainChunkBiome._determine_biome(self, world_x, world_z)
 
-# static version of _determine_biome for use in other scripts
 static func determine_biome(world_x: float, world_z: float) -> Biome:
-	var height = sample_height(world_x, world_z)
-	var humidity = config.humidity.noise.get_noise_2d(world_x, world_z)
-	var temperature = config.temperature.noise.get_noise_2d(world_x, world_z)
-	var difficulty = config.difficulty.noise.get_noise_2d(world_x, world_z)
-	return _get_best_biome(height, humidity, temperature, difficulty)
-
+	return TerrainChunkBiome.determine_biome(world_x, world_z)
 
 func _generate_water_mesh() -> PlaneMesh:
-	var mesh = PlaneMesh.new()
-	mesh.size = Vector2(size, size)
-	mesh.subdivide_depth = vertex_count - 1
-	mesh.subdivide_width = vertex_count - 1
-	return mesh
+	return TerrainChunkMesh._generate_water_mesh(self)
 
 func _generate_noise_data():
-	# Precompute noise for extended grid (+1 vertex border)
-	var extended_vertex_count = vertex_count + 6
-	continentalness_data.resize(extended_vertex_count * extended_vertex_count)
-	erosion_data.resize(extended_vertex_count * extended_vertex_count)
-	peaks_and_valleys_data.resize(extended_vertex_count * extended_vertex_count)
-	humidity_data.resize(extended_vertex_count * extended_vertex_count)
-	temperature_data.resize(extended_vertex_count * extended_vertex_count)
-	difficulty_data.resize(extended_vertex_count * extended_vertex_count)
+	TerrainChunkNoise._generate_noise_data(self)
 
-	# Generate grid vertices with noise-based height
-	for z in range(-3, vertex_count + 3):
-		for x in range(-3, vertex_count + 3):
-			var world_x = (float(x) / config.vertex_per_meter) + (grid_position.x * size)
-			var world_z = (float(z) / config.vertex_per_meter) + (grid_position.y * size)
+func _generate_mesh() -> ArrayMesh:
+	return TerrainChunkMesh._generate_mesh(self)
 
-			var index = (z + 3) * extended_vertex_count + (x + 3)
+func _generate_features_positions() -> Dictionary[Vector2i, Array]:
+	return TerrainChunkFeatures._generate_features_positions(self)
 
-			# Sample all noise values
-			var continentalness = config.continentalness.noise.get_noise_2d(world_x, world_z)
-			var erosion = config.erosion.noise.get_noise_2d(world_x, world_z)
-			var peaks_valleys = config.peaks_and_valeys.noise.get_noise_2d(world_x, world_z)
-			var humidity = config.humidity.noise.get_noise_2d(world_x, world_z)
-			var temperature = config.temperature.noise.get_noise_2d(world_x, world_z)
-			var difficulty = config.difficulty.noise.get_noise_2d(world_x, world_z)
+func _instantiate_features(feature_positions: Dictionary[Vector2i, Array]) -> void:
+	TerrainChunkFeatures._instantiate_features(self, feature_positions)
 
-			continentalness_data[index] = continentalness
-			erosion_data[index] = erosion
-			peaks_and_valleys_data[index] = peaks_valleys
-			humidity_data[index] = humidity
-			temperature_data[index] = temperature
-			difficulty_data[index] = difficulty
-
-			if x < 0 or x >= vertex_count or z < 0 or z >= vertex_count:
-				continue
-
-			var height = _sample_height(world_x, world_z)
-			height_data[z * vertex_count + x] = height
-			var biome = _determine_biome(world_x, world_z)
-			biome_data[z * vertex_count + x] = biome.id
-
+func _funny_randf(from: float, to: float) -> float:
+	return rng.randf_range(from, to)
 
 func _generate() -> void:
+	# Seed the random generator
 	rng.seed = hash(config.world_seed + hash(grid_position.x * grid_position.y))
-
 	height_data.resize(vertex_count * vertex_count)
 	biome_data.resize(vertex_count * vertex_count)
-
 	_generate_noise_data()
-
 	var mesh = _generate_mesh()
 	var water_mesh = _generate_water_mesh()
 	var feature_positions: Dictionary[Vector2i, Array] = _generate_features_positions()
-
 	var data = {
 		"mesh": mesh,
 		"water_mesh": water_mesh,
 		"feature_positions": feature_positions
 	}
-
 	_generated.emit.call_deferred(data)
 	generated.emit.call_deferred(grid_position)
 
-# normalizes noise values from -1 to 1 to 0 to 1
-static func normalize_noise_value(value: float) -> float:
-	return (value + 1.0) / 2.0
-
-func _generate_mesh() -> ArrayMesh:
-	var vertex_spacing = 1.0 / config.vertex_per_meter
-
-	var st = SurfaceTool.new()
-	st.begin(Mesh.PRIMITIVE_TRIANGLES)
-
-	st.set_custom_format(0, SurfaceTool.CUSTOM_RGB_FLOAT) # For continentalness, erosion, peaks_valleys
-	st.set_custom_format(1, SurfaceTool.CUSTOM_RGB_FLOAT) # For humidity, temperature, difficulty
-
-	# Precompute noise for extended grid (+1 vertex border)
-	var extended_vertex_count = vertex_count + 6
-
-	# Generate grid vertices with noise-based height
-	for z in range(-3, vertex_count + 3):
-		for x in range(-3, vertex_count + 3):
-
-			var index = (z + 3) * extended_vertex_count + (x + 3)
-
-			var humidity := humidity_data[index]
-			var temperature := temperature_data[index]
-			var difficulty := difficulty_data[index]
-
-			if x < 0 or x >= vertex_count or z < 0 or z >= vertex_count:
-				continue
-
-			var height := height_data[z * vertex_count + x]
-			var vertex = Vector3(x * vertex_spacing, height, z * vertex_spacing)
-			var uv = Vector2(float(x) / (vertex_count - 1), float(z) / (vertex_count - 1))
-			st.set_uv(uv)
-			var color := Color.PURPLE
-			var biome = biome_data[z * vertex_count + x]
-			color = biomes[biome].color
-
-			# Store in custom attributes (RGB format)
-			st.set_custom(0, color)
-
-			# Normalize the height value to [0, 1] range using min and max height
-			var normalized_height = (height - min_height) / (max_height - min_height)
-
-			st.set_custom(0, Color(normalized_height, humidity, temperature))
-			st.set_custom(1, Color(difficulty, 0.0, 0.0))
-			st.set_color(color)
-			#st.set_normal(_compute_normal(world_x, world_z))
-			st.add_vertex(vertex)
-
-	# Generate indices for triangles
-	for z in range(vertex_count - 1):
-		for x in range(vertex_count - 1):
-			var i = z * vertex_count + x
-			st.add_index(i)
-			st.add_index(i + 1)
-			st.add_index(i + vertex_count)
-
-			st.add_index(i + 1)
-			st.add_index(i + vertex_count + 1)
-			st.add_index(i + vertex_count)
-
-	st.generate_normals()
-	st.generate_tangents()
-
-	return st.commit()
-
-func _instantiate_features(feature_positions: Dictionary[Vector2i, Array]) -> void:
-	for i in range(feature_positions.size()):
-		var key = feature_positions.keys()[i]
-		var positions = feature_positions[key]
-		var biome = biomes_index_label[key.x]
-		var feature := biome.features[key.y].feature as Feature
-
-		if not feature:
-			continue
-
-		if feature.type == Feature.FeatureType.INSTANCE:
-			_instantiate_instances(feature, positions)
-		elif feature.type == Feature.FeatureType.MULTIMESH:
-			_instantiate_multimesh(biome, feature, positions)
-
-
-func _instantiate_multimesh(biome: Biome, feature: Feature, positions: Array) -> void:
-	var multimesh_instance := MultiMeshInstance3D.new()
-	var multimesh := MultiMesh.new()
-	multimesh.transform_format = MultiMesh.TRANSFORM_3D
-	multimesh.instance_count = positions.size()
-	multimesh.mesh = feature.mesh
-	for i in range(positions.size()):
-		multimesh.set_instance_transform(i, Transform3D(Basis(), positions[i]))
-	multimesh_instance.multimesh = multimesh
-	multimesh_instance.cast_shadow = feature.cast_shadow
-
-	if feature.receive_biome_color:
-		var material := multimesh.mesh.surface_get_material(0)
-		if material is ShaderMaterial:
-			var material_duplicated = material.duplicate() as ShaderMaterial
-			material_duplicated.set_shader_parameter(feature.shader_parameter_color_name, biome.color)
-			multimesh_instance.material_override = material_duplicated
-
-	add_child(multimesh_instance)
-	multimesh_instance.global_transform.origin = Vector3(0.0, 0.0, 0.0)
-
-func _instantiate_instances(feature: Feature, positions: Array) -> void:
-	for pos in positions:
-		_instantiate_feature(feature, pos)
-
-func _instantiate_feature(feature: Feature, p_position: Vector3) -> void:
-	var instance := feature.scene.instantiate() as Node3D
-	add_child(instance)
-	instance.global_position = p_position
-	instance.global_rotation = Vector3(0.0, deg_to_rad(_funny_randf(feature.random_rotation.x, feature.random_rotation.y)), 0.0)
-	var random_scale = _funny_randf(feature.random_scale.x, feature.random_scale.y)
-	instance.scale = Vector3(random_scale, random_scale, random_scale)
-
-
 func _on_chunk_generated(data: Dictionary) -> void:
-
 	time_to_generate = Time.get_ticks_msec() - time_to_generate
-
 	if sample_index >= max_samples - 1:
 		sample_index = 0
 		sample_array_filled = true
 	else:
 		sample_index += 1
-
 	generation_time_samples[sample_index] = time_to_generate
-
-	#print("Chunk generated in ", time_to_generate, "ms")
-
 	generating = false
 	mesh_instance.mesh = data["mesh"]
 	water_mesh_instance.mesh = data["water_mesh"]
 	mesh_instance.material_override = config.material
 	water_mesh_instance.material_override = config.water_material
 	water_mesh_instance.position.y = config.sea_level
-
 	_instantiate_features(data["feature_positions"])
+
+func _instantiate_feature(feature: Feature, p_position: Vector3) -> void:
+	TerrainChunkFeatures._instantiate_feature(self, feature, p_position)
+
+func _instantiate_instances(feature: Feature, positions: Array) -> void:
+	TerrainChunkFeatures._instantiate_instances(self, feature, positions)
+
+func _instantiate_multimesh(biome: Biome, feature: Feature, positions: Array) -> void:
+	TerrainChunkFeatures._instantiate_multimesh(self, biome, feature, positions)
 
 func _exit_tree():
 	if !WorkerThreadPool.is_task_completed(task_id):

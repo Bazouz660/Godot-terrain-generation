@@ -1,4 +1,4 @@
-[gd_scene load_steps=68 format=3 uid="uid://fxtibbpha2uy"]
+[gd_scene load_steps=65 format=3 uid="uid://fxtibbpha2uy"]
 
 [ext_resource type="Script" uid="uid://yo6o0dnaokx1" path="res://scripts/terrain_generator.gd" id="1_a202f"]
 [ext_resource type="Script" uid="uid://b4qygo0dkkp2g" path="res://scripts/terrain_config.gd" id="2_a0tk4"]
@@ -22,8 +22,6 @@
 [ext_resource type="Resource" uid="uid://dt1hbg6seby4r" path="res://dead_tree.tres" id="7_s0gvp"]
 [ext_resource type="FastNoiseLite" uid="uid://neh0047ipvn2" path="res://noises/temperature.tres" id="8_6iypd"]
 [ext_resource type="Texture2D" uid="uid://1ckqtmvy3jxf" path="res://temp_gradient.tres" id="11_tcnuu"]
-[ext_resource type="Script" uid="uid://b02w2bpqigy00" path="res://scripts/structure_gen_params.gd" id="19_lggff"]
-[ext_resource type="PackedScene" uid="uid://b8mh1ychevxyh" path="res://structures/house.tscn" id="20_s0gvp"]
 
 [sub_resource type="Resource" id="Resource_i5arm"]
 script = ExtResource("2_r3fl7")
@@ -309,17 +307,6 @@ _limits = [-30.0, 50.0, -1.0, 1.0]
 _data = [Vector2(-1, 0.455311), 0.0, 0.0, 0, 0, Vector2(-0.848552, 7.90894), 0.0, 0.0, 0, 0, Vector2(-0.652561, -1.29848), -4.27963, -4.27963, 0, 0, Vector2(0.100223, -3.49073), 0.0, 0.0, 0, 0, Vector2(0.694013, -10.6376), -41.5206, -41.5206, 0, 0, Vector2(1, -20.2349), -1.18923, 0.0, 0, 0]
 point_count = 6
 
-[sub_resource type="Resource" id="Resource_2mu51"]
-script = ExtResource("19_lggff")
-structure = ExtResource("20_s0gvp")
-difficulty_min = -1.0
-difficulty_max = 1.0
-loot_rarity = 0.0
-loot_amount = 0
-danger_level = 0
-density = 0.1
-metadata/_custom_type_script = ExtResource("19_lggff")
-
 [sub_resource type="NoiseTexture2D" id="NoiseTexture2D_tcnuu"]
 normalize = false
 noise = ExtResource("8_6iypd")
@@ -332,7 +319,6 @@ view_distance = 20
 update_rate = 0.1
 world_seed = 80
 max_threads = 8
-height_scale = 1.0
 continentalness = SubResource("NoiseTexture2D_tereu")
 continentalness_curve = SubResource("Curve_a0tk4")
 peaks_and_valeys = SubResource("NoiseTexture2D_3v7ru")
@@ -346,7 +332,6 @@ material = SubResource("ShaderMaterial_cdqbm")
 water_material = ExtResource("4_jka67")
 sea_level = 10.0
 biomes = Array[ExtResource("2_r3fl7")]([SubResource("Resource_i5arm"), SubResource("Resource_obt1j"), SubResource("Resource_jsk3o"), SubResource("Resource_imku0"), SubResource("Resource_6iypd"), SubResource("Resource_r3fl7"), SubResource("Resource_tereu"), SubResource("Resource_cdqbm"), SubResource("Resource_4arys"), SubResource("Resource_tuemg"), SubResource("Resource_i0g27")])
-structures = Array[ExtResource("19_lggff")]([SubResource("Resource_2mu51")])
 metadata/_custom_type_script = ExtResource("2_a0tk4")
 
 [sub_resource type="SphereShape3D" id="SphereShape3D_noarx"]
