@@ -58,3 +58,11 @@ static func _generate_mesh(chunk) -> ArrayMesh:
 	st.generate_normals()
 	st.generate_tangents()
 	return st.commit()
+
+static func _generate_chunk_borders_debug_mesh() -> BoxMesh:
+	var config = TerrainChunk.config
+	var size = config.chunk_size
+
+	var mesh = BoxMesh.new()
+	mesh.size = Vector3(size, 100.0, size)
+	return mesh

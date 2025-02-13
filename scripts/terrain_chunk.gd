@@ -12,6 +12,7 @@ static var biomes_index_label: Dictionary[int, Biome] = {}
 static var biomes: Array[Biome]
 static var max_height: float = -INF
 static var min_height: float = INF
+static var border_mesh: BoxMesh
 
 # --- Constants ---
 const CELL_SIZE: float = 0.25
@@ -46,6 +47,11 @@ var safe_vertex_count: int
 var grid_size: int
 var occupied_grid: PackedByteArray
 var time_to_generate
+var debug_mesh: MeshInstance3D
+
+static var structure_scene: PackedScene = preload("res://structures/house.tscn")
+var structure_test: Structure
+var structure_debug_mesh: MeshInstance3D
 
 # --- Signals ---
 signal _generated(meshes: Dictionary)
@@ -56,7 +62,12 @@ static func set_config(p_config: TerrainConfig) -> void:
 	config = p_config
 	biomes = config.biomes
 	generation_time_samples.resize(max_samples)
+	border_mesh = TerrainChunkMesh._generate_chunk_borders_debug_mesh()
+
 	_setup_shader_parameters()
+
+func _toggle_debug_view(state: bool) -> void:
+	debug_mesh.visible = state
 
 static func _setup_shader_parameters():
 	var shader_material = config.material
@@ -124,6 +135,34 @@ func _ready():
 	water_mesh_instance = MeshInstance3D.new()
 	water_mesh_instance.position.x += size * 0.5
 	water_mesh_instance.position.z += size * 0.5
+
+	debug_mesh = MeshInstance3D.new()
+	debug_mesh.mesh = border_mesh
+	debug_mesh.material_override = config.chunk_borders_material
+	debug_mesh.visible = config.show_chunk_borders
+	debug_mesh.position.x += size * 0.5
+	debug_mesh.position.z += size * 0.5
+
+	add_child(debug_mesh)
+
+	if grid_position.x % 4 == 0 and grid_position.y % 4 == 0:
+		structure_test = structure_scene.instantiate()
+		structure_test.position += Vector3(size * 0.5, 0, size * 0.5)
+		add_child(structure_test)
+		structure_debug_mesh = MeshInstance3D.new()
+		var mesh := PlaneMesh.new()
+		mesh.size = Vector2(structure_test.data.size.x, structure_test.data.size.z)
+		structure_debug_mesh.mesh = mesh
+		var structure_debug_material = StandardMaterial3D.new()
+		structure_debug_material.albedo_color = Color(1, 0, 0, 0.2)
+		structure_debug_material.cull_mode = BaseMaterial3D.CULL_DISABLED
+		structure_debug_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA_DEPTH_PRE_PASS
+		structure_debug_material.no_depth_test = true
+		structure_debug_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		structure_debug_mesh.material_override = structure_debug_material
+		structure_test.add_child(structure_debug_mesh)
+	#add_child(structure_test)
+
 	add_child(water_mesh_instance)
 	add_child(mesh_instance)
 
@@ -136,20 +175,50 @@ func generate():
 	task_id = WorkerThreadPool.add_task(_generate)
 
 func get_height_at_world_position(world_position: Vector3) -> float:
-	var local_position = world_position - global_transform.origin
-	var x = int(local_position.x * config.vertex_per_meter)
-	var z = int(local_position.z * config.vertex_per_meter)
+	# Convert world position to local position relative to chunk
+	var local_x = world_position.x - (grid_position.x * size)
+	var local_z = world_position.z - (grid_position.y * size)
+
+	# Convert to vertex coordinates
+	var x = int(local_x * config.vertex_per_meter)
+	var z = int(local_z * config.vertex_per_meter)
+
+	# Check bounds (due to possible floating point issues)
 	if x < 0 or x >= vertex_count or z < 0 or z >= vertex_count:
 		return 0.0
+
 	return height_data[z * vertex_count + x]
+
+func set_height_at_world_position(world_position: Vector3, height: float) -> void:
+	# Convert world position to local position relative to chunk
+	var local_x = world_position.x - (grid_position.x * size)
+	var local_z = world_position.z - (grid_position.y * size)
+
+	# Check if the position is within this chunk's bounds
+	if local_x < 0.0 or local_x >= size or local_z < 0.0 or local_z >= size:
+		print("Error setting height at world position: ", world_position, " is outside chunk bounds.")
+		return
+
+	# Convert to vertex coordinates
+	var x = int(local_x * config.vertex_per_meter)
+	var z = int(local_z * config.vertex_per_meter)
+
+	# Check bounds (due to possible floating point issues)
+	if x < 0 or x >= vertex_count or z < 0 or z >= vertex_count:
+		print("Error setting height at world position: ", world_position,
+			" local_x: ", local_x, " local_z: ", local_z,
+			" x: ", x, " z: ", z, " vertex_count: ", vertex_count)
+		return
+
+	height_data[z * vertex_count + x] = height
 
 func get_interpolated_height_at_world_position(world_position: Vector3) -> float:
 	var x_floor: float = floor(world_position.x)
 	var z_floor: float = floor(world_position.z)
-	var h00 = _sample_height(x_floor, z_floor)
-	var h01 = _sample_height(x_floor + 1.0, z_floor)
-	var h10 = _sample_height(x_floor, z_floor + 1.0)
-	var h11 = _sample_height(x_floor + 1.0, z_floor + 1.0)
+	var h00 = get_height_at_world_position(Vector3(x_floor, 0.0, z_floor))
+	var h01 = get_height_at_world_position(Vector3(x_floor + 1.0, 0.0, z_floor))
+	var h10 = get_height_at_world_position(Vector3(x_floor, 0.0, z_floor + 1.0))
+	var h11 = get_height_at_world_position(Vector3(x_floor + 1.0, 0.0, z_floor + 1.0))
 	var x_ratio = world_position.x - x_floor
 	var z_ratio = world_position.z - z_floor
 	var h0: float = lerp(h00, h01, x_ratio)
@@ -184,43 +253,30 @@ func get_index_from_world_coords(world_x: float, world_z: float) -> int:
 	var extended_vertex_count = vertex_count + 6
 	return adjusted_z * extended_vertex_count + adjusted_x
 
-func _sample_height(world_x: float, world_z: float) -> float:
-	# Delegate to the TerrainNoise module passing self for access to instance data.
-	return TerrainChunkNoise._sample_height(self, world_x, world_z)
-
-func _determine_biome(world_x: float, world_z: float) -> Biome:
-	return TerrainChunkBiome._determine_biome(self, world_x, world_z)
-
-static func determine_biome(world_x: float, world_z: float) -> Biome:
-	return TerrainChunkBiome.determine_biome(world_x, world_z)
-
-func _generate_water_mesh() -> PlaneMesh:
-	return TerrainChunkMesh._generate_water_mesh(self)
-
-func _generate_noise_data():
-	TerrainChunkNoise._generate_noise_data(self)
-
-func _generate_mesh() -> ArrayMesh:
-	return TerrainChunkMesh._generate_mesh(self)
-
-func _generate_features_positions() -> Dictionary[Vector2i, Array]:
-	return TerrainChunkFeatures._generate_features_positions(self)
-
-func _instantiate_features(feature_positions: Dictionary[Vector2i, Array]) -> void:
-	TerrainChunkFeatures._instantiate_features(self, feature_positions)
-
 func _funny_randf(from: float, to: float) -> float:
 	return rng.randf_range(from, to)
+
+func _apply_structure_pos(structure: Structure):
+	structure.position.y = structure.data.position.y
 
 func _generate() -> void:
 	# Seed the random generator
 	rng.seed = hash(config.world_seed + hash(grid_position.x * grid_position.y))
 	height_data.resize(vertex_count * vertex_count)
 	biome_data.resize(vertex_count * vertex_count)
-	_generate_noise_data()
-	var mesh = _generate_mesh()
-	var water_mesh = _generate_water_mesh()
-	var feature_positions: Dictionary[Vector2i, Array] = _generate_features_positions()
+	TerrainChunkNoise._generate_noise_data(self)
+
+	# Step 2: (NEW) Apply structure deformations.
+	# You can call a new module/method that iterates over the structures
+	# planned for this chunk and adjusts height_data accordingly.
+	TerrainChunkStructures._apply_deformations(self)
+
+	if structure_test:
+		_apply_structure_pos.call_deferred(structure_test)
+
+	var mesh = TerrainChunkMesh._generate_mesh(self)
+	var water_mesh = TerrainChunkMesh._generate_water_mesh(self)
+	var feature_positions: Dictionary[Vector2i, Array] = TerrainChunkFeatures._generate_features_positions(self)
 	var data = {
 		"mesh": mesh,
 		"water_mesh": water_mesh,
@@ -243,7 +299,7 @@ func _on_chunk_generated(data: Dictionary) -> void:
 	mesh_instance.material_override = config.material
 	water_mesh_instance.material_override = config.water_material
 	water_mesh_instance.position.y = config.sea_level
-	_instantiate_features(data["feature_positions"])
+	TerrainChunkFeatures._instantiate_features(self, data["feature_positions"])
 
 func _instantiate_feature(feature: Feature, p_position: Vector3) -> void:
 	TerrainChunkFeatures._instantiate_feature(self, feature, p_position)
@@ -257,3 +313,9 @@ func _instantiate_multimesh(biome: Biome, feature: Feature, positions: Array) ->
 func _exit_tree():
 	if !WorkerThreadPool.is_task_completed(task_id):
 		WorkerThreadPool.wait_for_task_completion(task_id)
+
+func get_structures_in_chunk() -> Array[StructureData]:
+	var array: Array[StructureData] = []
+	if structure_test:
+		array.append(structure_test.data)
+	return array

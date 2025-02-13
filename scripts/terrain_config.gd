@@ -1,6 +1,8 @@
 extends Resource
 class_name TerrainConfig
 
+signal debug_toggled(state: bool)
+
 @export var chunk_size: int = 16
 @export var vertex_per_meter: int = 4
 @export var view_distance: int = 3
@@ -22,6 +24,14 @@ class_name TerrainConfig
 @export var difficulty: NoiseTexture2D
 
 @export var material: Material
+@export var chunk_borders_material: Material
+
+@export var show_chunk_borders: bool = false:
+	set(value):
+		if value != show_chunk_borders:
+			show_chunk_borders = value
+			debug_toggled.emit(value)
+
 @export var water_material: Material
 @export var sea_level: float = 0.0
 

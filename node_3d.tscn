@@ -1,4 +1,4 @@
-[gd_scene load_steps=65 format=3 uid="uid://fxtibbpha2uy"]
+[gd_scene load_steps=67 format=3 uid="uid://fxtibbpha2uy"]
 
 [ext_resource type="Script" uid="uid://yo6o0dnaokx1" path="res://scripts/terrain_generator.gd" id="1_a202f"]
 [ext_resource type="Script" uid="uid://b4qygo0dkkp2g" path="res://scripts/terrain_config.gd" id="2_a0tk4"]
@@ -22,12 +22,13 @@
 [ext_resource type="Resource" uid="uid://dt1hbg6seby4r" path="res://dead_tree.tres" id="7_s0gvp"]
 [ext_resource type="FastNoiseLite" uid="uid://neh0047ipvn2" path="res://noises/temperature.tres" id="8_6iypd"]
 [ext_resource type="Texture2D" uid="uid://1ckqtmvy3jxf" path="res://temp_gradient.tres" id="11_tcnuu"]
+[ext_resource type="Shader" uid="uid://bk3hgpjombkne" path="res://chunk_borders.gdshader" id="12_vxd74"]
 
 [sub_resource type="Resource" id="Resource_i5arm"]
 script = ExtResource("2_r3fl7")
 label = "Ocean"
 id = 0
-color = Color(0.392419, 0.395656, 0.330431, 1)
+color = Color(0.85098, 0.784314, 0.466667, 1)
 height_range = Vector2(-30, 10)
 strict_height = true
 humidity_range = Vector2(-1, 1)
@@ -102,7 +103,7 @@ metadata/_custom_type_script = ExtResource("2_r3fl7")
 [sub_resource type="Resource" id="Resource_j3e5s"]
 script = ExtResource("3_tcnuu")
 feature = ExtResource("6_lggff")
-density = 0.05
+density = 0.1
 metadata/_custom_type_script = ExtResource("3_tcnuu")
 
 [sub_resource type="Resource" id="Resource_nu31w"]
@@ -122,10 +123,10 @@ script = ExtResource("2_r3fl7")
 label = "Swamp"
 id = 4
 color = Color(1.05888e-06, 0.425975, 0.257865, 1)
-height_range = Vector2(10, 15)
+height_range = Vector2(9, 15)
 strict_height = true
 humidity_range = Vector2(0.65, 1)
-temperature_range = Vector2(0.2, 0.5)
+temperature_range = Vector2(-0.2, 0.3)
 difficulty_range = Vector2(-1, 1)
 features = Array[ExtResource("3_tcnuu")]([SubResource("Resource_j3e5s"), SubResource("Resource_nu31w"), SubResource("Resource_1q667")])
 metadata/_custom_type_script = ExtResource("2_r3fl7")
@@ -188,7 +189,7 @@ color = Color(0.560793, 0.61, 0.3416, 1)
 height_range = Vector2(12, 50)
 strict_height = false
 humidity_range = Vector2(-0.6, 0.2)
-temperature_range = Vector2(0.2, 0.6)
+temperature_range = Vector2(0.4, 0.6)
 difficulty_range = Vector2(-1, 1)
 features = Array[ExtResource("3_tcnuu")]([SubResource("Resource_s0gvp"), SubResource("Resource_dhlwf"), SubResource("Resource_ype4i")])
 metadata/_custom_type_script = ExtResource("2_r3fl7")
@@ -256,6 +257,14 @@ difficulty_range = Vector2(-1, 1)
 features = Array[ExtResource("3_tcnuu")]([])
 metadata/_custom_type_script = ExtResource("2_r3fl7")
 
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_dhlwf"]
+render_priority = 0
+shader = ExtResource("12_vxd74")
+shader_parameter/color1 = Color(1, 1, 1, 0.839216)
+shader_parameter/color2 = Color(1, 0, 0, 1)
+shader_parameter/threshold = 0.105
+shader_parameter/fresnel_sharpness = 14.505
+
 [sub_resource type="NoiseTexture2D" id="NoiseTexture2D_tereu"]
 generate_mipmaps = false
 seamless = true
@@ -264,7 +273,7 @@ noise = ExtResource("3_i5arm")
 
 [sub_resource type="Curve" id="Curve_a0tk4"]
 _limits = [0.0, 50.0, -1.0, 1.0]
-_data = [Vector2(-1, 0), 0.0, 0.0, 0, 0, Vector2(-0.305122, 3.9629), 0.0, 0.0, 0, 0, Vector2(0.113586, 10.5396), 0.0, 0.0, 0, 0, Vector2(0.585746, 13.2799), 13.4575, 13.4575, 0, 0, Vector2(0.995546, 17.9384), 0.0, 0.0, 0, 0]
+_data = [Vector2(-1, 0), 0.0, 0.0, 0, 0, Vector2(-0.305122, 3.9629), 0.0, 0.0, 0, 0, Vector2(0.104677, 9.16948), 0.0, 0.0, 0, 0, Vector2(0.585746, 13.2799), 13.4575, 13.4575, 0, 0, Vector2(0.995546, 17.9384), 0.0, 0.0, 0, 0]
 point_count = 5
 
 [sub_resource type="NoiseTexture2D" id="NoiseTexture2D_cdqbm"]
@@ -315,7 +324,7 @@ noise = ExtResource("8_6iypd")
 script = ExtResource("2_a0tk4")
 chunk_size = 16
 vertex_per_meter = 1
-view_distance = 20
+view_distance = 15
 update_rate = 0.1
 world_seed = 80
 max_threads = 8
@@ -329,6 +338,8 @@ humidity = SubResource("NoiseTexture2D_wlxy5")
 temperature = SubResource("NoiseTexture2D_tcnuu")
 difficulty = SubResource("NoiseTexture2D_cdqbm")
 material = SubResource("ShaderMaterial_cdqbm")
+chunk_borders_material = SubResource("ShaderMaterial_dhlwf")
+show_chunk_borders = false
 water_material = ExtResource("4_jka67")
 sea_level = 10.0
 biomes = Array[ExtResource("2_r3fl7")]([SubResource("Resource_i5arm"), SubResource("Resource_obt1j"), SubResource("Resource_jsk3o"), SubResource("Resource_imku0"), SubResource("Resource_6iypd"), SubResource("Resource_r3fl7"), SubResource("Resource_tereu"), SubResource("Resource_cdqbm"), SubResource("Resource_4arys"), SubResource("Resource_tuemg"), SubResource("Resource_i0g27")])
@@ -365,7 +376,7 @@ origin = NodePath("CharacterBody3D")
 transform = Transform3D(1, 0, 0, 0, 0.964984, 0.262307, 0, -0.262307, 0.964984, 1.67982, 3.97993, 6.17667)
 motion_mode = 1
 script = ExtResource("2_noarx")
-SPRINT_SPEED = 100.0
+SPRINT_SPEED = 50.0
 CAMERA_SENSIVITY = 99.975
 
 [node name="Camera3D" type="Camera3D" parent="CharacterBody3D"]
@@ -391,10 +402,10 @@ offset_bottom = 40.0
 
 [node name="MarginContainer" type="MarginContainer" parent="PanelContainer"]
 layout_mode = 2
-theme_override_constants/margin_left = 3
-theme_override_constants/margin_top = 3
-theme_override_constants/margin_right = 3
-theme_override_constants/margin_bottom = 3
+theme_override_constants/margin_left = 5
+theme_override_constants/margin_top = 5
+theme_override_constants/margin_right = 5
+theme_override_constants/margin_bottom = 5
 
 [node name="Label" type="Label" parent="PanelContainer/MarginContainer"]
 unique_name_in_owner = true

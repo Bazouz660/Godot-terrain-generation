@@ -19,11 +19,16 @@ var max_unload_time: float = -1
 func _ready():
 	config.setup()
 	TerrainChunk.set_config(config)
+	config.debug_toggled.connect(_on_toggle_debug_view)
 	timer.timeout.connect(_refresh_chunks)
 	timer.wait_time = config.update_rate
 	timer.one_shot = false
 	timer.start.call_deferred()
 	add_child(timer)
+
+func _on_toggle_debug_view(state: bool):
+	for chunk in terrain_chunks.values():
+		chunk._toggle_debug_view(state)
 
 func _delete_chunk(chunk: TerrainChunk):
 	terrain_chunks.erase(chunk.grid_position)
@@ -131,7 +136,7 @@ func _input(event):
 		if event.pressed and event.keycode == KEY_ESCAPE:
 			get_tree().quit()
 
-func _process(delta):
+func _process(_delta):
 	_process_chunk_queue()
 
 	# var frame_time_ms = delta * 1000
@@ -151,7 +156,7 @@ func _process(delta):
 
 	var height = TerrainChunk.sample_height(world_pos.x, world_pos.z)
 
-	var biome = TerrainChunk.determine_biome(world_pos.x, world_pos.z)
+	var biome = TerrainChunkBiome.determine_biome(world_pos.x, world_pos.z)
 
 	var continentalness_str = "%.2f" % continentalness
 	var peaks_and_valeys_str = "%.2f" % peaks_and_valeys
@@ -160,7 +165,9 @@ func _process(delta):
 	var temperature_str = "%.2f" % temperature
 	var difficulty_str = "%.2f" % difficulty
 	var height_str = "%.2f" % height
+	var x_str = "%.2f" % world_pos.x
 	var y_str = "%.2f" % world_pos.y
+	var z_str = "%.2f" % world_pos.z
 	var biome_str = biome.label if biome != null else "None"
 
 	label.text = "Continentalness: " + continentalness_str + "\n" \
@@ -170,7 +177,7 @@ func _process(delta):
 		+ "Temperature: " + temperature_str + "\n" \
 		+ "Difficulty: " + difficulty_str + "\n" \
 		+ "Height: " + height_str + "\n" \
-		+ "Y: " + y_str + "\n" \
+		+ "X: " + x_str + "  Y: " + y_str + "  Z: " + z_str + "\n" \
 		+ "Biome: " + biome_str
 
 func _exit_tree():

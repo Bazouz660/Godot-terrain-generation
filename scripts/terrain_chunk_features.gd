@@ -1,7 +1,7 @@
 extends Node
 class_name TerrainChunkFeatures
 
-static func _generate_features_positions(chunk) -> Dictionary[Vector2i, Array]:
+static func _generate_features_positions(chunk: TerrainChunk) -> Dictionary[Vector2i, Array]:
 	var positions: Dictionary[Vector2i, Array] = {}
 
 	for biome_index in range(TerrainChunk.biomes.size()):

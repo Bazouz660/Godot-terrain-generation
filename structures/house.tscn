@@ -1,7 +1,14 @@
-[gd_scene load_steps=7 format=4 uid="uid://b8mh1ychevxyh"]
+[gd_scene load_steps=9 format=4 uid="uid://b8mh1ychevxyh"]
 
 [ext_resource type="Script" uid="uid://ossp17ebjyc6" path="res://scripts/structure.gd" id="1_kn68b"]
+[ext_resource type="Script" uid="uid://cff345sdst7dp" path="res://scripts/structure_data.gd" id="2_qw8cy"]
 [ext_resource type="Texture2D" uid="uid://d36ebdlgavyic" path="res://house_Image_0.png" id="2_tbddv"]
+
+[sub_resource type="Resource" id="Resource_tbddv"]
+script = ExtResource("2_qw8cy")
+size = Vector3(9.48056, 11.5743, 11.6543)
+position = Vector3(-4.40341, 0.0179764, -5.9092)
+local_pos = Vector3(-4.40341, 0.0179764, -5.9092)
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_qw8cy"]
 resource_name = "Material.001"
@@ -47,6 +54,7 @@ data = PackedVector3Array(1.6989, 4.4441, -2.1996, 0, 6.3062, -2.1996, -1.6989, 
 [node name="Structure" type="Area3D" node_paths=PackedStringArray("mesh")]
 script = ExtResource("1_kn68b")
 mesh = NodePath("Mesh")
+data = SubResource("Resource_tbddv")
 
 [node name="Mesh" type="MeshInstance3D" parent="."]
 transform = Transform3D(1.8, 0, 0, 0, 1.8, 0, 0, 0, 1.8, 0, 0, 0)

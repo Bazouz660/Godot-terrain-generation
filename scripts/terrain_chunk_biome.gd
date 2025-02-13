@@ -4,41 +4,57 @@ class_name TerrainChunkBiome
 static func _get_best_biome(height: float, humidity: float, temperature: float, difficulty: float) -> Biome:
 	var best_biome: Biome = null
 	var best_score: float = -1.0
+	# A small constant to avoid division by zero.
+	var EPSILON = 0.0001
 
 	for b in TerrainChunk.biomes:
 		var score = 0.0
 
-		# Height scoring
-		var height_diff = abs(height - ((b.height_range.x + b.height_range.y) / 2.0))
+		# --- Height Scoring ---
+		var height_center = (b.height_range.x + b.height_range.y) / 2.0
 		var height_range = (b.height_range.y - b.height_range.x) / 2.0
-		var height_score = 1.0 - (height_diff / height_range)
-		if height_score < 0:
-			height_score *= 20.0
-		score += height_score
+		var safe_height_range = max(height_range, EPSILON)
+		var height_diff = abs(height - height_center)
+		var height_base_score = 1.0 - (height_diff / safe_height_range)
+		if height_diff <= safe_height_range:
+			# In-range: boost score by inverse of the range.
+			score += height_base_score * (1.0 / safe_height_range)
+		else:
+			# Out-of-range: apply a constant penalty (here 20.0 as before).
+			score += height_base_score * 2000.0
 
-		# Humidity scoring
-		var humidity_diff = abs(humidity - ((b.humidity_range.x + b.humidity_range.y) / 2.0))
+		# --- Humidity Scoring ---
+		var humidity_center = (b.humidity_range.x + b.humidity_range.y) / 2.0
 		var humidity_range = (b.humidity_range.y - b.humidity_range.x) / 2.0
-		var humidity_score = 1.0 - (humidity_diff / humidity_range)
-		if humidity_score < 0:
-			humidity_score *= 2.0
-		score += humidity_score
+		var safe_humidity_range = max(humidity_range, EPSILON)
+		var humidity_diff = abs(humidity - humidity_center)
+		var humidity_base_score = 1.0 - (humidity_diff / safe_humidity_range)
+		if humidity_diff <= safe_humidity_range:
+			score += humidity_base_score * (1.0 / safe_humidity_range)
+		else:
+			score += humidity_base_score * 2.0
 
-		# Temperature scoring
-		var temperature_diff = abs(temperature - ((b.temperature_range.x + b.temperature_range.y) / 2.0))
+		# --- Temperature Scoring ---
+		var temperature_center = (b.temperature_range.x + b.temperature_range.y) / 2.0
 		var temperature_range = (b.temperature_range.y - b.temperature_range.x) / 2.0
-		var temperature_score = 1.0 - (temperature_diff / temperature_range)
-		if temperature_score < 0:
-			temperature_score *= 2.0
-		score += temperature_score
+		var safe_temperature_range = max(temperature_range, EPSILON)
+		var temperature_diff = abs(temperature - temperature_center)
+		var temperature_base_score = 1.0 - (temperature_diff / safe_temperature_range)
+		if temperature_diff <= safe_temperature_range:
+			score += temperature_base_score * (1.0 / safe_temperature_range)
+		else:
+			score += temperature_base_score * 2.0
 
-		# Difficulty scoring
-		var difficulty_diff = abs(difficulty - ((b.difficulty_range.x + b.difficulty_range.y) / 2.0))
+		# --- Difficulty Scoring ---
+		var difficulty_center = (b.difficulty_range.x + b.difficulty_range.y) / 2.0
 		var difficulty_range = (b.difficulty_range.y - b.difficulty_range.x) / 2.0
-		var difficulty_score = 1.0 - (difficulty_diff / difficulty_range)
-		if difficulty_score < 0:
-			difficulty_score *= 2.0
-		score += difficulty_score
+		var safe_difficulty_range = max(difficulty_range, EPSILON)
+		var difficulty_diff = abs(difficulty - difficulty_center)
+		var difficulty_base_score = 1.0 - (difficulty_diff / safe_difficulty_range)
+		if difficulty_diff <= safe_difficulty_range:
+			score += difficulty_base_score * (1.0 / safe_difficulty_range)
+		else:
+			score += difficulty_base_score * 2.0
 
 		if score > best_score:
 			best_score = score
