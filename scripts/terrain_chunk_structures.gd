@@ -1,15 +1,20 @@
 extends Node
 class_name TerrainChunkStructures
 
-# This is a helper that you could later extend to work with multiple structures.
+# Apply structure deformations to a given chunk by querying the global structure manager.
 static func _apply_deformations(chunk: TerrainChunk) -> void:
-	# Assume you have a function to retrieve structures for this chunk.
-	# For each structure, call _apply_structure_deformation.
-	if chunk.get_structures_in_chunk().is_empty():
-		return
+	# Create an AABB for the chunk (extend vertically to cover all terrain)
+	var chunk_area = AABB(
+		Vector3(chunk.world_offset_x, -1000, chunk.world_offset_z),
+		Vector3(TerrainChunk.config.chunk_size, 2000, TerrainChunk.config.chunk_size)
+	)
 
-	for structure in chunk.get_structures_in_chunk():
-		_apply_structure_deformation(chunk, structure)
+	# Get all global structures overlapping this chunk
+	var structures = StructureManager.get_structures_in_area(chunk_area)
+
+	# Process each structure
+	for structure_data in structures:
+		_apply_structure_deformation(chunk, structure_data)
 
 # In TerrainChunkStructures.gd
 
@@ -24,13 +29,6 @@ static func _apply_structure_deformation(chunk: TerrainChunk, structure_data: St
 	var min_z = structure_pos.z
 	var max_z = structure_pos.z + structure_size.z
 
-	var center: Vector2 = Vector2((min_x + max_x) / 2, (min_z + max_z) / 2)
-
-	# Sample the base height at the structure's position using the original noise
-	var base_height = chunk.get_height_at_world_position(Vector3(center.x, 0, center.y))
-
-	structure_data.position.y = base_height
-
 	# round min_x, max_x, min_z, max_z to the largest nearest integer for positive values and smallest for negative values
 	min_x = floor(min_x)
 	max_x = ceil(max_x)
@@ -41,5 +39,8 @@ static func _apply_structure_deformation(chunk: TerrainChunk, structure_data: St
 	for x in range(int(min_x), int(max_x)):
 		for z in range(int(min_z), int(max_z)):
 			var world_pos = Vector3(x, 0, z)
+
+			# if not chunk.is_position_in_chunk(world_pos):
+			# 	continue
 
 			chunk.set_height_at_world_position(world_pos, structure_data.position.y)

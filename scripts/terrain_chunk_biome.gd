@@ -21,7 +21,7 @@ static func _get_best_biome(height: float, humidity: float, temperature: float, 
 			score += height_base_score * (1.0 / safe_height_range)
 		else:
 			# Out-of-range: apply a constant penalty (here 20.0 as before).
-			score += height_base_score * 2000.0
+			score += height_base_score * 200000.0
 
 		# --- Humidity Scoring ---
 		var humidity_center = (b.humidity_range.x + b.humidity_range.y) / 2.0
@@ -63,7 +63,7 @@ static func _get_best_biome(height: float, humidity: float, temperature: float, 
 	return best_biome
 
 static func _determine_biome(chunk: TerrainChunk, world_x: float, world_z: float) -> Biome:
-	var height = TerrainChunkNoise._sample_height(chunk, world_x, world_z)
+	var height = chunk.get_height_at_world_position(Vector3(world_x, 0.0, world_z))
 	var index = chunk.get_index_from_world_coords(world_x, world_z)
 	var humidity = chunk.humidity_data[index]
 	var temperature = chunk.temperature_data[index]

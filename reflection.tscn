@@ -177,9 +177,9 @@ void fragment() {
 
     vec3 final_color = mix(refracted_color.rgb, depth_color_adj.rgb, max(0.3, fresnel_factor * 0.7));
     final_color = mix(deep_water_color.rgb, final_color, visibility);
-	
+
 	vec4 reflection_color = texture(REFLECTION_TEXTURE, vec2(UV.x, 1.0 - UV.y));
-	
+
 	if (reflection_color.a == 1.0) {
 		final_color = mix(final_color, reflection_color.rgb, 0.5);
 	}

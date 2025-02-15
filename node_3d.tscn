@@ -1,4 +1,4 @@
-[gd_scene load_steps=67 format=3 uid="uid://fxtibbpha2uy"]
+[gd_scene load_steps=69 format=3 uid="uid://fxtibbpha2uy"]
 
 [ext_resource type="Script" uid="uid://yo6o0dnaokx1" path="res://scripts/terrain_generator.gd" id="1_a202f"]
 [ext_resource type="Script" uid="uid://b4qygo0dkkp2g" path="res://scripts/terrain_config.gd" id="2_a0tk4"]
@@ -339,7 +339,7 @@ temperature = SubResource("NoiseTexture2D_tcnuu")
 difficulty = SubResource("NoiseTexture2D_cdqbm")
 material = SubResource("ShaderMaterial_cdqbm")
 chunk_borders_material = SubResource("ShaderMaterial_dhlwf")
-show_chunk_borders = false
+show_chunk_borders = true
 water_material = ExtResource("4_jka67")
 sea_level = 10.0
 biomes = Array[ExtResource("2_r3fl7")]([SubResource("Resource_i5arm"), SubResource("Resource_obt1j"), SubResource("Resource_jsk3o"), SubResource("Resource_imku0"), SubResource("Resource_6iypd"), SubResource("Resource_r3fl7"), SubResource("Resource_tereu"), SubResource("Resource_cdqbm"), SubResource("Resource_4arys"), SubResource("Resource_tuemg"), SubResource("Resource_i0g27")])
@@ -366,6 +366,10 @@ fog_mode = 1
 fog_light_energy = 0.1
 fog_density = 1.0
 volumetric_fog_density = 0.007
+
+[sub_resource type="SphereShape3D" id="SphereShape3D_vxd74"]
+
+[sub_resource type="SphereMesh" id="SphereMesh_dhlwf"]
 
 [node name="TerrainGenerator" type="Node3D" node_paths=PackedStringArray("origin")]
 script = ExtResource("1_a202f")
@@ -411,6 +415,27 @@ theme_override_constants/margin_bottom = 5
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 4
+text = "Continentalness: 0.06
+Peaks and Valeys: 0.42
+Erosion: 0.06
+Humidity: 0.08
+Temperature: 0.01
+Difficulty: -0.00
+Height: 0.00
+X: 1.68  Y: 3.98  Z: 6.18
+Biome: None"
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]
 environment = SubResource("Environment_jka67")
+
+[node name="RigidBody3D" type="RigidBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.155739, 159.541, 0)
+mass = 177.828
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="RigidBody3D"]
+transform = Transform3D(10, 0, 0, 0, 10, 0, 0, 0, 10, 0, 0, 0)
+shape = SubResource("SphereShape3D_vxd74")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="RigidBody3D"]
+transform = Transform3D(10, 0, 0, 0, 10, 0, 0, 0, 10, 0, 0, 0)
+mesh = SubResource("SphereMesh_dhlwf")

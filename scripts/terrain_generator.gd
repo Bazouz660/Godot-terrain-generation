@@ -4,8 +4,10 @@ class_name TerrainGenerator
 @export var config: TerrainConfig
 @export var origin: Node3D
 
+
 static var player_grid_position: Vector2i = Vector2i(0, 0)
 
+var structure_manager: StructureManager = StructureManager.new()
 var terrain_chunks: Dictionary[Vector2i, TerrainChunk] = {}
 var timer := Timer.new()
 var current_thread_usage: int = 0
@@ -19,6 +21,10 @@ var max_unload_time: float = -1
 func _ready():
 	config.setup()
 	TerrainChunk.set_config(config)
+	add_child(structure_manager)
+
+	for i in range(100):
+		structure_manager.generate_random_structure()
 	config.debug_toggled.connect(_on_toggle_debug_view)
 	timer.timeout.connect(_refresh_chunks)
 	timer.wait_time = config.update_rate

@@ -43,7 +43,7 @@ float calculate_biome_score(int biome_index, float height, float humidity, float
         score += height_base_score * height_weight;
     } else {
         // Out-of-range: apply a constant penalty (as in your original code)
-        score += height_base_score * 2000.0;
+        score += height_base_score * 200000.0;
     }
 
     // --- Humidity Scoring ---

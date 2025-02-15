@@ -66,3 +66,10 @@ static func _generate_chunk_borders_debug_mesh() -> BoxMesh:
 	var mesh = BoxMesh.new()
 	mesh.size = Vector3(size, 100.0, size)
 	return mesh
+
+static func create_heightmap_collision(chunk: TerrainChunk) -> HeightMapShape3D:
+	var shape := HeightMapShape3D.new()
+	shape.map_depth = chunk.vertex_count
+	shape.map_width = chunk.vertex_count
+	shape.map_data = chunk.height_data
+	return shape

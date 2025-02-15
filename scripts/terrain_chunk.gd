@@ -1,4 +1,4 @@
-extends Node3D
+extends StaticBody3D
 class_name TerrainChunk
 
 # --- Static Variables & Configuration ---
@@ -22,6 +22,7 @@ var generating: bool = false
 var rng: RandomNumberGenerator = RandomNumberGenerator.new()
 
 # --- Private Instance Variables ---
+var collision_object: CollisionShape3D
 var mesh_instance: MeshInstance3D
 var water_mesh_instance: MeshInstance3D
 var grid_position: Vector2i
@@ -48,10 +49,6 @@ var grid_size: int
 var occupied_grid: PackedByteArray
 var time_to_generate
 var debug_mesh: MeshInstance3D
-
-static var structure_scene: PackedScene = preload("res://structures/house.tscn")
-var structure_test: Structure
-var structure_debug_mesh: MeshInstance3D
 
 # --- Signals ---
 signal _generated(meshes: Dictionary)
@@ -136,6 +133,10 @@ func _ready():
 	water_mesh_instance.position.x += size * 0.5
 	water_mesh_instance.position.z += size * 0.5
 
+	collision_object = CollisionShape3D.new()
+	collision_object.position.x += size * 0.5
+	collision_object.position.z += size * 0.5
+
 	debug_mesh = MeshInstance3D.new()
 	debug_mesh.mesh = border_mesh
 	debug_mesh.material_override = config.chunk_borders_material
@@ -144,24 +145,7 @@ func _ready():
 	debug_mesh.position.z += size * 0.5
 
 	add_child(debug_mesh)
-
-	if grid_position.x % 4 == 0 and grid_position.y % 4 == 0:
-		structure_test = structure_scene.instantiate()
-		structure_test.position += Vector3(size * 0.5, 0, size * 0.5)
-		add_child(structure_test)
-		structure_debug_mesh = MeshInstance3D.new()
-		var mesh := PlaneMesh.new()
-		mesh.size = Vector2(structure_test.data.size.x, structure_test.data.size.z)
-		structure_debug_mesh.mesh = mesh
-		var structure_debug_material = StandardMaterial3D.new()
-		structure_debug_material.albedo_color = Color(1, 0, 0, 0.2)
-		structure_debug_material.cull_mode = BaseMaterial3D.CULL_DISABLED
-		structure_debug_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA_DEPTH_PRE_PASS
-		structure_debug_material.no_depth_test = true
-		structure_debug_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-		structure_debug_mesh.material_override = structure_debug_material
-		structure_test.add_child(structure_debug_mesh)
-	#add_child(structure_test)
+	add_child(collision_object)
 
 	add_child(water_mesh_instance)
 	add_child(mesh_instance)
@@ -189,14 +173,19 @@ func get_height_at_world_position(world_position: Vector3) -> float:
 
 	return height_data[z * vertex_count + x]
 
+func is_position_in_chunk(world_position: Vector3) -> bool:
+	var local_x = world_position.x - (grid_position.x * size)
+	var local_z = world_position.z - (grid_position.y * size)
+	return local_x >= 0.0 and local_x <= size and local_z >= 0.0 and local_z <= size
+
 func set_height_at_world_position(world_position: Vector3, height: float) -> void:
 	# Convert world position to local position relative to chunk
 	var local_x = world_position.x - (grid_position.x * size)
 	var local_z = world_position.z - (grid_position.y * size)
 
 	# Check if the position is within this chunk's bounds
-	if local_x < 0.0 or local_x >= size or local_z < 0.0 or local_z >= size:
-		print("Error setting height at world position: ", world_position, " is outside chunk bounds.")
+	if local_x < 0.0 or local_x > size or local_z < 0.0 or local_z > size:
+		#print("Error setting height at world position: ", world_position, " is outside chunk bounds.")
 		return
 
 	# Convert to vertex coordinates
@@ -205,9 +194,9 @@ func set_height_at_world_position(world_position: Vector3, height: float) -> voi
 
 	# Check bounds (due to possible floating point issues)
 	if x < 0 or x >= vertex_count or z < 0 or z >= vertex_count:
-		print("Error setting height at world position: ", world_position,
-			" local_x: ", local_x, " local_z: ", local_z,
-			" x: ", x, " z: ", z, " vertex_count: ", vertex_count)
+		# print("Error setting height at world position: ", world_position,
+		# 	" local_x: ", local_x, " local_z: ", local_z,
+		# 	" x: ", x, " z: ", z, " vertex_count: ", vertex_count)
 		return
 
 	height_data[z * vertex_count + x] = height
@@ -264,6 +253,7 @@ func _generate() -> void:
 	rng.seed = hash(config.world_seed + hash(grid_position.x * grid_position.y))
 	height_data.resize(vertex_count * vertex_count)
 	biome_data.resize(vertex_count * vertex_count)
+
 	TerrainChunkNoise._generate_noise_data(self)
 
 	# Step 2: (NEW) Apply structure deformations.
@@ -271,14 +261,13 @@ func _generate() -> void:
 	# planned for this chunk and adjusts height_data accordingly.
 	TerrainChunkStructures._apply_deformations(self)
 
-	if structure_test:
-		_apply_structure_pos.call_deferred(structure_test)
-
-	var mesh = TerrainChunkMesh._generate_mesh(self)
-	var water_mesh = TerrainChunkMesh._generate_water_mesh(self)
+	var mesh := TerrainChunkMesh._generate_mesh(self)
+	var collision_shape := TerrainChunkMesh.create_heightmap_collision(self)
+	var water_mesh := TerrainChunkMesh._generate_water_mesh(self)
 	var feature_positions: Dictionary[Vector2i, Array] = TerrainChunkFeatures._generate_features_positions(self)
 	var data = {
 		"mesh": mesh,
+		"collision_shape": collision_shape,
 		"water_mesh": water_mesh,
 		"feature_positions": feature_positions
 	}
@@ -295,6 +284,7 @@ func _on_chunk_generated(data: Dictionary) -> void:
 	generation_time_samples[sample_index] = time_to_generate
 	generating = false
 	mesh_instance.mesh = data["mesh"]
+	collision_object.shape = data["collision_shape"]
 	water_mesh_instance.mesh = data["water_mesh"]
 	mesh_instance.material_override = config.material
 	water_mesh_instance.material_override = config.water_material
@@ -313,9 +303,3 @@ func _instantiate_multimesh(biome: Biome, feature: Feature, positions: Array) ->
 func _exit_tree():
 	if !WorkerThreadPool.is_task_completed(task_id):
 		WorkerThreadPool.wait_for_task_completion(task_id)
-
-func get_structures_in_chunk() -> Array[StructureData]:
-	var array: Array[StructureData] = []
-	if structure_test:
-		array.append(structure_test.data)
-	return array
