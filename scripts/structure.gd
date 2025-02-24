@@ -12,7 +12,6 @@ var _footprint_mesh: MeshInstance3D
 func _ready():
 	_generate_data()
 	_generate_footprint_mesh()
-	StructureManager.register_structure(data)
 
 func _generate_footprint_mesh():
 	_footprint_mesh = MeshInstance3D.new()
@@ -26,7 +25,7 @@ func _generate_footprint_mesh():
 	structure_debug_material.no_depth_test = true
 	structure_debug_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	_footprint_mesh.material_override = structure_debug_material
-	_footprint_mesh.visible = false
+	#_footprint_mesh.visible = false
 	add_child(_footprint_mesh)
 
 func _generate_data(_p = ""):

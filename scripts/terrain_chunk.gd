@@ -242,6 +242,23 @@ func get_index_from_world_coords(world_x: float, world_z: float) -> int:
 	var extended_vertex_count = vertex_count + 6
 	return adjusted_z * extended_vertex_count + adjusted_x
 
+func get_occupied_grid_index(x: float, z: float) -> int:
+	# Convert the world position to the chunk's local space.
+	var local_x = x - (grid_position.x * size)
+	var local_z = z - (grid_position.y * size)
+
+	# Determine which cell the position falls into by dividing by CELL_SIZE.
+	var cell_x = int(local_x / CELL_SIZE)
+	var cell_z = int(local_z / CELL_SIZE)
+
+	# Check bounds to ensure the cell is within the chunk.
+	if cell_x < 0 or cell_x >= cells_per_side or cell_z < 0 or cell_z >= cells_per_side:
+		return -1 # or handle the out-of-bounds case as needed
+
+	# Convert the 2D cell coordinate into a 1D array index.
+	return cell_z * cells_per_side + cell_x
+
+
 func _funny_randf(from: float, to: float) -> float:
 	return rng.randf_range(from, to)
 
