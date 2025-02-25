@@ -16,28 +16,31 @@ func generate_random_structure() -> void:
 	structure_instance._generate_data()
 
 	var aabb = AABB(structure_instance.data.position, structure_instance.data.size)
-	print("Can place structure: ", can_place_structure(aabb))
-	print("Structure position: ", structure_instance.data.position)
-	print("Structure size: ", structure_instance.data.size)
+	var steepness = _check_terrain_steepness(aabb)
 
-	if !can_place_structure(aabb):
+	if !can_place_structure(aabb) or steepness > 0.05:
 		structure_instance.queue_free()
 	else:
 		StructureManager.register_structure(structure_instance.data)
 
-# # returns the average steepness of the terrain within
-# func _check_terrain_steepness(aabb: AABB) -> float:
-# 	var total_steepness = 0.0
-# 	var total_points = 0
-# 	for x in range(int(aabb.position.x), int(aabb.position.x + aabb.size.x)):
-# 		for z in range(int(aabb.position.z), int(aabb.position.z + aabb.size.z)):
-# 			var world_pos = Vector3(x, 0, z)
-# 			var height = TerrainChunkNoise.sample_height(world_pos.x, world_pos.z)
-# 			var normal = TerrainChunkNoise.sample_normal(world_pos.x, world_pos.z)
-# 			var steepness = normal.angle_to(Vector3(0, 1, 0))
-# 			total_steepness += steepness
-# 			total_points += 1
-# 	return total_steepness / total_points
+# returns the average steepness of the terrain within
+func _check_terrain_steepness(aabb: AABB) -> float:
+	var total_steepness = 0.0
+	var total_points = 0
+	for x in range(int(aabb.position.x), int(aabb.position.x + aabb.size.x)):
+		for z in range(int(aabb.position.z), int(aabb.position.z + aabb.size.z)):
+			var world_pos = Vector3(x, 0, z)
+			var height = TerrainChunkNoise.sample_height(world_pos.x, world_pos.z)
+			world_pos.y = height
+
+			var normal = TerrainChunkNoise.sample_normal(world_pos.x, world_pos.z)
+			var steepness = normal.angle_to(Vector3(0, 1, 0))
+
+			total_steepness += steepness
+			total_points += 1
+
+	return total_steepness / total_points
+
 
 static func register_structure(structure_data: StructureData) -> void:
 	# Add structure data if not already present.

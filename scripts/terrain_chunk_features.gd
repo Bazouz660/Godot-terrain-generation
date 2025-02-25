@@ -54,7 +54,7 @@ static func _generate_features_positions(chunk: TerrainChunk) -> Dictionary[Vect
 					continue
 
 				# Edge case: some corners match; verify exact biome
-				if valid_corners >= 2 and TerrainChunkBiome.determine_biome(world_x, world_z).id == biome_index:
+				if valid_corners >= 2 and TerrainChunkBiome._determine_biome_precise(chunk, world_x, world_z).id == biome_index:
 					var height = chunk.get_interpolated_height_at_world_position(Vector3(world_x, 0.0, world_z))
 					candidate_positions[valid_count] = Vector3(world_x, height, world_z)
 					chunk.occupied_grid[grid_index] = 1

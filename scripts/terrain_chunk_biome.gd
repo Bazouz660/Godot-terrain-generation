@@ -70,6 +70,14 @@ static func _determine_biome(chunk: TerrainChunk, world_x: float, world_z: float
 	var difficulty = chunk.difficulty_data[index]
 	return _get_best_biome(height, humidity, temperature, difficulty)
 
+static func _determine_biome_precise(chunk: TerrainChunk, world_x: float, world_z: float) -> Biome:
+	var config = TerrainChunk.config
+	var height = chunk.get_interpolated_height_at_world_position(Vector3(world_x, 0.0, world_z))
+	var humidity = config.humidity.noise.get_noise_2d(world_x, world_z)
+	var temperature = config.temperature.noise.get_noise_2d(world_x, world_z)
+	var difficulty = config.difficulty.noise.get_noise_2d(world_x, world_z)
+	return _get_best_biome(height, humidity, temperature, difficulty)
+
 static func determine_biome(world_x: float, world_z: float) -> Biome:
 	var config = TerrainChunk.config
 	var continentalness = config.continentalness.noise.get_noise_2d(world_x, world_z)

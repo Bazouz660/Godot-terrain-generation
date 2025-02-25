@@ -80,3 +80,13 @@ static func sample_height(world_x: float, world_z: float) -> float:
 	var peaks_height = config.peaks_and_valeys_curve.sample_baked(peaks_and_valleys)
 	var erosion_height = config.erosion_curve.sample_baked(erosion)
 	return continentalness_height + erosion_height + peaks_height
+
+static func sample_normal(world_x: float, world_z: float) -> Vector3:
+	var dx := 0.01
+	var dz := 0.01
+	var x0 := sample_height(world_x - dx, world_z)
+	var x1 := sample_height(world_x + dx, world_z)
+	var z0 := sample_height(world_x, world_z - dz)
+	var z1 := sample_height(world_x, world_z + dz)
+	var normal := Vector3(x0 - x1, 2.0, z0 - z1)
+	return normal.normalized()
