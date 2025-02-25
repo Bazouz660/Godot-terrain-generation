@@ -7,7 +7,7 @@ class_name TerrainGenerator
 
 static var player_grid_position: Vector2i = Vector2i(0, 0)
 
-var structure_manager: StructureManager = StructureManager.new()
+@onready var structure_manager := %StructureManager as StructureManager
 var terrain_chunks: Dictionary[Vector2i, TerrainChunk] = {}
 var timer := Timer.new()
 var current_thread_usage: int = 0
@@ -21,16 +21,26 @@ var max_unload_time: float = -1
 func _ready():
 	config.setup()
 	TerrainChunk.set_config(config)
-	add_child(structure_manager)
+	structure_manager.view_distance = config.view_distance * config.chunk_size
+	_generate_structure_data()
 
-	for i in range(100):
-		structure_manager.generate_random_structure()
 	config.debug_toggled.connect(_on_toggle_debug_view)
 	timer.timeout.connect(_refresh_chunks)
 	timer.wait_time = config.update_rate
 	timer.one_shot = false
 	timer.start.call_deferred()
 	add_child(timer)
+
+func _generate_structure_data():
+	# We no longer pre-generate structures for the whole world
+	# Instead, structures will be generated on-demand as the player explores
+	# This is handled by the structure_manager._ensure_structures_generated method
+	# You can still generate structures for the starting area if desired
+	var starting_region = Vector2(0, 0)
+	structure_manager._generate_structures_for_region(starting_region)
+
+	# Mark the starting region as generated
+	structure_manager.generated_regions[starting_region] = true
 
 func _on_toggle_debug_view(state: bool):
 	for chunk in terrain_chunks.values():
@@ -105,11 +115,11 @@ func _unload_chunks():
 func _load_chunks():
 	var view_distance = config.view_distance
 	var view_distance_sq = view_distance * view_distance
-	for x in range(-view_distance, view_distance + 1):
+	for x in range(- view_distance, view_distance + 1):
 		var x_sq = x * x
 		if x_sq > view_distance_sq:
 			continue
-		for z in range(-view_distance, view_distance + 1):
+		for z in range(- view_distance, view_distance + 1):
 			if x_sq + z * z > view_distance_sq:
 				continue
 			var check_position = Vector2i(x, z) + player_grid_position
@@ -177,14 +187,14 @@ func _process(_delta):
 	var biome_str = biome.label if biome != null else "None"
 
 	label.text = "Continentalness: " + continentalness_str + "\n" \
-		+ "Peaks and Valeys: " + peaks_and_valeys_str + "\n" \
-		+ "Erosion: " + erosion_str + "\n" \
-		+ "Humidity: " + humidity_str + "\n" \
-		+ "Temperature: " + temperature_str + "\n" \
-		+ "Difficulty: " + difficulty_str + "\n" \
-		+ "Height: " + height_str + "\n" \
-		+ "X: " + x_str + "  Y: " + y_str + "  Z: " + z_str + "\n" \
-		+ "Biome: " + biome_str
+		+"Peaks and Valeys: " + peaks_and_valeys_str + "\n" \
+		+"Erosion: " + erosion_str + "\n" \
+		+"Humidity: " + humidity_str + "\n" \
+		+"Temperature: " + temperature_str + "\n" \
+		+"Difficulty: " + difficulty_str + "\n" \
+		+"Height: " + height_str + "\n" \
+		+"X: " + x_str + "  Y: " + y_str + "  Z: " + z_str + "\n" \
+		+"Biome: " + biome_str
 
 func _exit_tree():
 	print("Max unload time: ", max_unload_time, "ms")

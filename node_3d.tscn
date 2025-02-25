@@ -1,4 +1,4 @@
-[gd_scene load_steps=69 format=3 uid="uid://fxtibbpha2uy"]
+[gd_scene load_steps=68 format=3 uid="uid://fxtibbpha2uy"]
 
 [ext_resource type="Script" uid="uid://yo6o0dnaokx1" path="res://scripts/terrain_generator.gd" id="1_a202f"]
 [ext_resource type="Script" uid="uid://b4qygo0dkkp2g" path="res://scripts/terrain_config.gd" id="2_a0tk4"]
@@ -23,6 +23,8 @@
 [ext_resource type="FastNoiseLite" uid="uid://neh0047ipvn2" path="res://noises/temperature.tres" id="8_6iypd"]
 [ext_resource type="Texture2D" uid="uid://1ckqtmvy3jxf" path="res://temp_gradient.tres" id="11_tcnuu"]
 [ext_resource type="Shader" uid="uid://bk3hgpjombkne" path="res://chunk_borders.gdshader" id="12_vxd74"]
+[ext_resource type="Script" uid="uid://c5tglw11bs7kb" path="res://scripts/structure_manager.gd" id="23_5t8nk"]
+[ext_resource type="Script" uid="uid://ch2fhrwgxm5ty" path="res://scripts/debug_region_visualiser.gd" id="25_j3e5s"]
 
 [sub_resource type="Resource" id="Resource_i5arm"]
 script = ExtResource("2_r3fl7")
@@ -347,8 +349,6 @@ metadata/_custom_type_script = ExtResource("2_a0tk4")
 
 [sub_resource type="SphereShape3D" id="SphereShape3D_noarx"]
 
-[sub_resource type="CapsuleMesh" id="CapsuleMesh_a0tk4"]
-
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_a0tk4"]
 
 [sub_resource type="Sky" id="Sky_r3fl7"]
@@ -367,14 +367,15 @@ fog_light_energy = 0.1
 fog_density = 1.0
 volumetric_fog_density = 0.007
 
-[sub_resource type="SphereShape3D" id="SphereShape3D_vxd74"]
-
-[sub_resource type="SphereMesh" id="SphereMesh_dhlwf"]
-
 [node name="TerrainGenerator" type="Node3D" node_paths=PackedStringArray("origin")]
 script = ExtResource("1_a202f")
 config = SubResource("Resource_jka67")
 origin = NodePath("CharacterBody3D")
+
+[node name="StructureManager" type="Node3D" parent="."]
+unique_name_in_owner = true
+script = ExtResource("23_5t8nk")
+metadata/_custom_type_script = ExtResource("23_5t8nk")
 
 [node name="CharacterBody3D" type="CharacterBody3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 0.964984, 0.262307, 0, -0.262307, 0.964984, 1.67982, 3.97993, 6.17667)
@@ -395,10 +396,6 @@ disabled = true
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
 transform = Transform3D(0.925468, -0.089412, -0.368123, 0.371418, 0.405403, 0.835283, 0.0745534, -0.909755, 0.408396, 0, 3.43812, 0)
 shadow_enabled = true
-
-[node name="MeshInstance3D" type="MeshInstance3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.23182, 0)
-mesh = SubResource("CapsuleMesh_a0tk4")
 
 [node name="PanelContainer" type="PanelContainer" parent="."]
 offset_right = 40.0
@@ -428,14 +425,6 @@ Biome: None"
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]
 environment = SubResource("Environment_jka67")
 
-[node name="RigidBody3D" type="RigidBody3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.155739, 159.541, 0)
-mass = 177.828
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="RigidBody3D"]
-transform = Transform3D(10, 0, 0, 0, 10, 0, 0, 0, 10, 0, 0, 0)
-shape = SubResource("SphereShape3D_vxd74")
-
-[node name="MeshInstance3D" type="MeshInstance3D" parent="RigidBody3D"]
-transform = Transform3D(10, 0, 0, 0, 10, 0, 0, 0, 10, 0, 0, 0)
-mesh = SubResource("SphereMesh_dhlwf")
+[node name="RegionVisualizer" type="Node3D" parent="." node_paths=PackedStringArray("structure_manager")]
+script = ExtResource("25_j3e5s")
+structure_manager = NodePath("../StructureManager")

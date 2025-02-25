@@ -17,3 +17,9 @@ class_name StructureGenParams
 
 # Sets the structure density
 @export_range(0.0, 1.0, 0.01) var density: float = 0.1
+
+
+# Define biome-specific structure variants
+@export var valid_biomes: Array = [
+    "Grass Plains",
+]

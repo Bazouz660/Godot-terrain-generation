@@ -9,6 +9,8 @@ script = ExtResource("2_qw8cy")
 size = Vector3(9.48056, 11.5743, 11.6543)
 position = Vector3(-4.40341, 0.0179764, -5.9092)
 local_pos = Vector3(-4.40341, 0.0179764, -5.9092)
+rotation_degrees = Vector3(0, 0, 0)
+structure_type = "default"
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_qw8cy"]
 resource_name = "Material.001"
