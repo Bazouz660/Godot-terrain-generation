@@ -108,9 +108,9 @@ static func _instantiate_feature(chunk: TerrainChunk, feature: Feature, p_positi
 	var instance = feature.scene.instantiate() as Node3D
 	chunk.add_child(instance)
 	instance.global_position = p_position
-	#instance.global_rotation = Vector3(0.0, deg_to_rad(chunk._funny_randf(feature.random_rotation.x, feature.random_rotation.y)), 0.0)
-	#var random_scale = chunk._funny_randf(feature.random_scale.x, feature.random_scale.y)
-	#instance.scale = Vector3(random_scale, random_scale, random_scale)
+	instance.global_rotation = Vector3(0.0, deg_to_rad(chunk._funny_randf(feature.random_rotation.x, feature.random_rotation.y)), 0.0)
+	var random_scale = chunk._funny_randf(feature.random_scale.x, feature.random_scale.y)
+	instance.scale = Vector3(random_scale, random_scale, random_scale)
 
 	if feature.follow_normals:
 		var normal = TerrainChunk.calculate_terrain_normal(chunk, p_position)

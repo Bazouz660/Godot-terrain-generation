@@ -29,7 +29,7 @@ static func _generate_mesh(chunk) -> ArrayMesh:
 				continue
 
 			var height = chunk.height_data[z * chunk.vertex_count + x]
-			var vertex = Vector3(x * vertex_spacing, height, z * vertex_spacing)
+			var vertex = Vector3(x * vertex_spacing, height * config.height_scale, z * vertex_spacing)
 			var uv = Vector2(float(x) / (chunk.vertex_count - 1), float(z) / (chunk.vertex_count - 1))
 			st.set_uv(uv)
 

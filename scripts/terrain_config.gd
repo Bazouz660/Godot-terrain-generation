@@ -10,6 +10,8 @@ signal debug_toggled(state: bool)
 @export var world_seed: int = 0
 @export var max_threads: int = 4
 
+@export var height_scale: float = 1.0
+
 @export var continentalness: NoiseTexture2D
 @export var continentalness_curve: Curve
 
