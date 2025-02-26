@@ -9,7 +9,7 @@ class_name StructureData
 @export var rotation_degrees: Vector3 = Vector3.ZERO
 
 # Add type information for structure variants
-@export var structure_type: String = "default"
+@export var structure_scene: PackedScene
 
 # Add a unique ID for comparison and dictionary usage
 var unique_id: int = 0

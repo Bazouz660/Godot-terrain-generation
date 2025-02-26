@@ -10,15 +10,13 @@ var print_action = _generate_data.bind()
 var _footprint_mesh: MeshInstance3D
 
 func _ready():
+    _footprint_mesh = MeshInstance3D.new()
+    add_child(_footprint_mesh)
     if not data:
         _generate_data()
     _generate_footprint_mesh()
 
 func _generate_footprint_mesh():
-    if not data:
-        return
-
-    _footprint_mesh = MeshInstance3D.new()
     var _mesh := PlaneMesh.new()
     _mesh.size = Vector2(data.size.x, data.size.z)
     _footprint_mesh.mesh = _mesh
@@ -29,8 +27,8 @@ func _generate_footprint_mesh():
     structure_debug_material.no_depth_test = true
     structure_debug_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
     _footprint_mesh.material_override = structure_debug_material
+    _footprint_mesh.mesh = _mesh
     #_footprint_mesh.visible = false
-    add_child(_footprint_mesh)
 
 func _generate_data(_p = ""):
     var aabb := mesh.global_transform * mesh.get_aabb()
@@ -39,6 +37,7 @@ func _generate_data(_p = ""):
     data.size = aabb.size
     data.position = aabb.position
     data.local_pos = aabb.position - global_transform.origin
+    _generate_footprint_mesh()
 
 func _exit_tree():
     # Don't unregister the structure data when the instance is removed

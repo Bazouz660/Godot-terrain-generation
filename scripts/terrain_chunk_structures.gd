@@ -35,6 +35,12 @@ static func _fill_positions(chunk: TerrainChunk, structure_data: StructureData) 
 	var cell_max_x = int(ceil(local_max_x))
 	var cell_max_z = int(ceil(local_max_z))
 
+	# Add a margin of 10 cells around the structure.
+	cell_min_x = max(0, cell_min_x - 10)
+	cell_min_z = max(0, cell_min_z - 10)
+	cell_max_x = min(chunk.cells_per_side, cell_max_x + 10)
+	cell_max_z = min(chunk.cells_per_side, cell_max_z + 10)
+
 	for cell_x in range(cell_min_x, cell_max_x):
 		for cell_z in range(cell_min_z, cell_max_z):
 			# Calculate the 1D index for the occupied_grid.
@@ -97,3 +103,4 @@ static func _apply_structure_deformation(chunk: TerrainChunk, structure_data: St
 				# Else, leave the terrain height unchanged.
 
 			chunk.set_height_at_world_position(world_pos, new_height)
+			chunk.set_biome_at_world_position(world_pos, TerrainChunkBiome._determine_biome_precise(chunk, x, z).id)

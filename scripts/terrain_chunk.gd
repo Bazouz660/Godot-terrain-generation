@@ -10,7 +10,7 @@ static var sample_array_filled: bool = false
 static var biomes_label_index: Dictionary[String, Biome] = {}
 static var biomes_index_label: Dictionary[int, Biome] = {}
 static var biomes: Array[Biome]
-static var max_height: float = -INF
+static var max_height: float = - INF
 static var min_height: float = INF
 static var border_mesh: BoxMesh
 
@@ -159,19 +159,24 @@ func generate():
 	task_id = WorkerThreadPool.add_task(_generate)
 
 func get_height_at_world_position(world_position: Vector3) -> float:
-	# Convert world position to local position relative to chunk
+	# Convert world position to local position relative to this chunk.
 	var local_x = world_position.x - (grid_position.x * size)
 	var local_z = world_position.z - (grid_position.y * size)
 
-	# Convert to vertex coordinates
+	# Clamp the local coordinates to ensure they fall within [0, size].
+	local_x = clamp(local_x, 0.0, size)
+	local_z = clamp(local_z, 0.0, size)
+
+	# Convert to vertex coordinates.
 	var x = int(local_x * config.vertex_per_meter)
 	var z = int(local_z * config.vertex_per_meter)
 
-	# Check bounds (due to possible floating point issues)
-	if x < 0 or x >= vertex_count or z < 0 or z >= vertex_count:
-		return 0.0
+	# Clamp the indices to ensure they’re within the valid vertex range.
+	x = clamp(x, 0, vertex_count - 1)
+	z = clamp(z, 0, vertex_count - 1)
 
 	return height_data[z * vertex_count + x]
+
 
 func is_position_in_chunk(world_position: Vector3) -> bool:
 	var local_x = world_position.x - (grid_position.x * size)
@@ -201,6 +206,29 @@ func set_height_at_world_position(world_position: Vector3, height: float) -> voi
 
 	height_data[z * vertex_count + x] = height
 
+func set_biome_at_world_position(world_position: Vector3, biome_id: int) -> void:
+	# Convert world position to local position relative to chunk
+	var local_x = world_position.x - (grid_position.x * size)
+	var local_z = world_position.z - (grid_position.y * size)
+
+	# Check if the position is within this chunk's bounds
+	if local_x < 0.0 or local_x > size or local_z < 0.0 or local_z > size:
+		#print("Error setting biome at world position: ", world_position, " is outside chunk bounds.")
+		return
+
+	# Convert to vertex coordinates
+	var x = int(local_x * config.vertex_per_meter)
+	var z = int(local_z * config.vertex_per_meter)
+
+	# Check bounds (due to possible floating point issues)
+	if x < 0 or x >= vertex_count or z < 0 or z >= vertex_count:
+		# print("Error setting biome at world position: ", world_position,
+		# 	" local_x: ", local_x, " local_z: ", local_z,
+		# 	" x: ", x, " z: ", z, " vertex_count: ", vertex_count)
+		return
+
+	biome_data[z * vertex_count + x] = biome_id
+
 func get_interpolated_height_at_world_position(world_position: Vector3) -> float:
 	var x_floor: float = floor(world_position.x)
 	var z_floor: float = floor(world_position.z)
@@ -213,6 +241,40 @@ func get_interpolated_height_at_world_position(world_position: Vector3) -> float
 	var h0: float = lerp(h00, h01, x_ratio)
 	var h1: float = lerp(h10, h11, x_ratio)
 	return lerp(h0, h1, z_ratio)
+
+static func calculate_terrain_normal(chunk: TerrainChunk, world_position: Vector3) -> Vector3:
+	# Sample height at neighboring points
+	var sample_distance = 1.0 / chunk.config.vertex_per_meter
+
+	var h_center = world_position.y
+	var h_right = chunk.get_interpolated_height_at_world_position(
+		Vector3(world_position.x + sample_distance, 0.0, world_position.z))
+	var h_forward = chunk.get_interpolated_height_at_world_position(
+		Vector3(world_position.x, 0.0, world_position.z + sample_distance))
+	var h_left = chunk.get_interpolated_height_at_world_position(
+		Vector3(world_position.x - sample_distance, 0.0, world_position.z))
+	var h_back = chunk.get_interpolated_height_at_world_position(
+		Vector3(world_position.x, 0.0, world_position.z - sample_distance))
+
+	# Calculate vectors along the surface
+	var right_vec = Vector3(sample_distance, h_right - h_center, 0.0)
+	var forward_vec = Vector3(0.0, h_forward - h_center, sample_distance)
+	var left_vec = Vector3(- sample_distance, h_left - h_center, 0.0)
+	var back_vec = Vector3(0.0, h_back - h_center, - sample_distance)
+
+	# Calculate normals with cross products and average them
+	var normal1 = right_vec.cross(forward_vec).normalized()
+	var normal2 = forward_vec.cross(left_vec).normalized()
+	var normal3 = left_vec.cross(back_vec).normalized()
+	var normal4 = back_vec.cross(right_vec).normalized()
+
+	var normal = (normal1 + normal2 + normal3 + normal4).normalized()
+
+	# Make sure normal points upward (not strictly necessary but often desirable)
+	if normal.y < 0:
+		normal = - normal
+
+	return normal
 
 func _get_local_coords(world_position: Vector2) -> Vector2i:
 	var chunk_start_x = grid_position.x * size - (1.0 / config.vertex_per_meter)

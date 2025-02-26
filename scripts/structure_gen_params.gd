@@ -2,6 +2,7 @@ extends Resource
 class_name StructureGenParams
 
 @export var structure: PackedScene
+@export var structure_data: StructureData
 
 @export_range(-1.0, 1.0, 0.01) var difficulty_min: float = -1.0
 @export_range(-1.0, 1.0, 0.01) var difficulty_max: float = 1.0
@@ -20,6 +21,6 @@ class_name StructureGenParams
 
 
 # Define biome-specific structure variants
-@export var valid_biomes: Array = [
+@export var valid_biomes: Array[String] = [
     "Grass Plains",
 ]

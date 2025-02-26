@@ -67,7 +67,7 @@ static func _generate_features_positions(chunk: TerrainChunk) -> Dictionary[Vect
 			feature_index += 1
 	return positions
 
-static func _instantiate_features(chunk, feature_positions: Dictionary[Vector2i, Array]) -> void:
+static func _instantiate_features(chunk: TerrainChunk, feature_positions: Dictionary[Vector2i, Array]) -> void:
 	for key in feature_positions.keys():
 		var positions = feature_positions[key]
 		var biome = TerrainChunk.biomes_index_label[key.x]
@@ -79,7 +79,7 @@ static func _instantiate_features(chunk, feature_positions: Dictionary[Vector2i,
 		elif feature.type == Feature.FeatureType.MULTIMESH:
 			_instantiate_multimesh(chunk, biome, feature, positions)
 
-static func _instantiate_multimesh(chunk, biome: Biome, feature: Feature, positions: Array) -> void:
+static func _instantiate_multimesh(chunk: TerrainChunk, biome: Biome, feature: Feature, positions: Array) -> void:
 	var multimesh_instance = MultiMeshInstance3D.new()
 	var multimesh = MultiMesh.new()
 	multimesh.transform_format = MultiMesh.TRANSFORM_3D
@@ -100,14 +100,21 @@ static func _instantiate_multimesh(chunk, biome: Biome, feature: Feature, positi
 	chunk.add_child(multimesh_instance)
 	multimesh_instance.global_transform.origin = Vector3(0.0, 0.0, 0.0)
 
-static func _instantiate_instances(chunk, feature: Feature, positions: Array) -> void:
+static func _instantiate_instances(chunk: TerrainChunk, feature: Feature, positions: Array) -> void:
 	for pos in positions:
 		_instantiate_feature(chunk, feature, pos)
 
-static func _instantiate_feature(chunk, feature: Feature, p_position: Vector3) -> void:
+static func _instantiate_feature(chunk: TerrainChunk, feature: Feature, p_position: Vector3) -> void:
 	var instance = feature.scene.instantiate() as Node3D
 	chunk.add_child(instance)
 	instance.global_position = p_position
-	instance.global_rotation = Vector3(0.0, deg_to_rad(chunk._funny_randf(feature.random_rotation.x, feature.random_rotation.y)), 0.0)
-	var random_scale = chunk._funny_randf(feature.random_scale.x, feature.random_scale.y)
-	instance.scale = Vector3(random_scale, random_scale, random_scale)
+	#instance.global_rotation = Vector3(0.0, deg_to_rad(chunk._funny_randf(feature.random_rotation.x, feature.random_rotation.y)), 0.0)
+	#var random_scale = chunk._funny_randf(feature.random_scale.x, feature.random_scale.y)
+	#instance.scale = Vector3(random_scale, random_scale, random_scale)
+
+	if feature.follow_normals:
+		var normal = TerrainChunk.calculate_terrain_normal(chunk, p_position)
+		# Create a quaternion that rotates from the default up to the surface normal.
+		# Both vectors must be normalized
+		var align_quat = Quaternion(Vector3.UP, normal)
+		instance.global_rotation = align_quat.get_euler()

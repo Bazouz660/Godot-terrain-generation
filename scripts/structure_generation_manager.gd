@@ -1,35 +1,14 @@
 extends Node
 class_name StructureGenerationManager
 
-# Store structure types and their corresponding scenes
-static var structure_types: Dictionary = {
-	"house": preload("res://structures/house.tscn"),
-	# Add more structure types here
-}
-
 # Store structure generation parameters
 static var structure_gen_params: Array[StructureGenParams] = []
 
 # Initialize structure generation parameters
-static func initialize():
-	# Load structure generation parameters from a configuration file or resource
-	# For this example, we'll hardcode them
-	var house_params = StructureGenParams.new()
-	house_params.structure = structure_types["house"]
-	house_params.difficulty_min = -0.5
-	house_params.difficulty_max = 0.5
-	house_params.loot_rarity = 0.2
-	house_params.loot_amount = 0.3
-	house_params.danger_level = 0.1
-	house_params.density = 0.1
-	house_params.valid_biomes = ["Grass Plains"]
-
-	structure_gen_params.append(house_params)
-
-	# Add more structure types with different parameters
+static func initialize(params: Array[StructureGenParams]) -> void:
+	structure_gen_params = params
 
 # Not used in this example, but could be used to update parameters at runtime
-
 # # Get appropriate structure for a position based on terrain parameters
 # static func get_structure_for_position(
 # 	position: Vector3,
@@ -113,8 +92,9 @@ static func generate_structure_data_for_region(
 			# Create structure data based on structure type
 			var data = StructureData.new()
 			data.position = Vector3(x, height, z)
-			data.size = Vector3(10, 5, 11) # Default size
+			data.size = params.structure_data.size
 			data.rotation_degrees = Vector3(0, rng.randf_range(0, 360), 0)
+			data.structure_scene = params.structure
 
 			structures.append(data)
 

@@ -1,4 +1,4 @@
-[gd_scene load_steps=68 format=3 uid="uid://fxtibbpha2uy"]
+[gd_scene load_steps=79 format=3 uid="uid://fxtibbpha2uy"]
 
 [ext_resource type="Script" uid="uid://yo6o0dnaokx1" path="res://scripts/terrain_generator.gd" id="1_a202f"]
 [ext_resource type="Script" uid="uid://b4qygo0dkkp2g" path="res://scripts/terrain_config.gd" id="2_a0tk4"]
@@ -23,8 +23,15 @@
 [ext_resource type="FastNoiseLite" uid="uid://neh0047ipvn2" path="res://noises/temperature.tres" id="8_6iypd"]
 [ext_resource type="Texture2D" uid="uid://1ckqtmvy3jxf" path="res://temp_gradient.tres" id="11_tcnuu"]
 [ext_resource type="Shader" uid="uid://bk3hgpjombkne" path="res://chunk_borders.gdshader" id="12_vxd74"]
+[ext_resource type="Script" uid="uid://bm7qyhn2d3ott" path="res://scripts/feature.gd" id="12_ype4i"]
+[ext_resource type="PackedScene" uid="uid://civc75awfd446" path="res://rock_2.tscn" id="13_riyl1"]
 [ext_resource type="Script" uid="uid://c5tglw11bs7kb" path="res://scripts/structure_manager.gd" id="23_5t8nk"]
+[ext_resource type="Script" uid="uid://b02w2bpqigy00" path="res://scripts/structure_gen_params.gd" id="24_nu31w"]
 [ext_resource type="Script" uid="uid://ch2fhrwgxm5ty" path="res://scripts/debug_region_visualiser.gd" id="25_j3e5s"]
+[ext_resource type="PackedScene" uid="uid://b8mh1ychevxyh" path="res://structures/house.tscn" id="25_obt1j"]
+[ext_resource type="Resource" uid="uid://dbtxs5ugcpy2y" path="res://structures/house_data.tres" id="26_2yde8"]
+[ext_resource type="PackedScene" uid="uid://b3jj1j0iearer" path="res://structures/tower.tscn" id="26_obt1j"]
+[ext_resource type="Resource" uid="uid://b7h3gcmea71lm" path="res://structures/tower_data.tres" id="28_id0nj"]
 
 [sub_resource type="Resource" id="Resource_i5arm"]
 script = ExtResource("2_r3fl7")
@@ -246,6 +253,26 @@ difficulty_range = Vector2(-1, 1)
 features = Array[ExtResource("3_tcnuu")]([SubResource("Resource_5t8nk"), SubResource("Resource_pb8dk")])
 metadata/_custom_type_script = ExtResource("2_r3fl7")
 
+[sub_resource type="Resource" id="Resource_4i7mf"]
+script = ExtResource("12_ype4i")
+label = "Rock2"
+type = 0
+scene = ExtResource("13_riyl1")
+cast_shadow = 0
+receive_biome_color = false
+shader_parameter_color_name = "albedo"
+random_scale = Vector2(1, 1)
+random_rotation = Vector2(0, 360)
+random_offset = Vector3(0.16, 0.47, 0.285)
+follow_normals = true
+metadata/_custom_type_script = ExtResource("12_ype4i")
+
+[sub_resource type="Resource" id="Resource_3s0n5"]
+script = ExtResource("3_tcnuu")
+feature = SubResource("Resource_4i7mf")
+density = 0.08
+metadata/_custom_type_script = ExtResource("3_tcnuu")
+
 [sub_resource type="Resource" id="Resource_i0g27"]
 script = ExtResource("2_r3fl7")
 label = "Gravel Beach"
@@ -256,7 +283,7 @@ strict_height = true
 humidity_range = Vector2(-1, 1)
 temperature_range = Vector2(-1, 0)
 difficulty_range = Vector2(-1, 1)
-features = Array[ExtResource("3_tcnuu")]([])
+features = Array[ExtResource("3_tcnuu")]([SubResource("Resource_3s0n5")])
 metadata/_custom_type_script = ExtResource("2_r3fl7")
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_dhlwf"]
@@ -341,11 +368,37 @@ temperature = SubResource("NoiseTexture2D_tcnuu")
 difficulty = SubResource("NoiseTexture2D_cdqbm")
 material = SubResource("ShaderMaterial_cdqbm")
 chunk_borders_material = SubResource("ShaderMaterial_dhlwf")
-show_chunk_borders = false
+show_chunk_borders = true
 water_material = ExtResource("4_jka67")
 sea_level = 10.0
 biomes = Array[ExtResource("2_r3fl7")]([SubResource("Resource_i5arm"), SubResource("Resource_obt1j"), SubResource("Resource_jsk3o"), SubResource("Resource_imku0"), SubResource("Resource_6iypd"), SubResource("Resource_r3fl7"), SubResource("Resource_tereu"), SubResource("Resource_cdqbm"), SubResource("Resource_4arys"), SubResource("Resource_tuemg"), SubResource("Resource_i0g27")])
 metadata/_custom_type_script = ExtResource("2_a0tk4")
+
+[sub_resource type="Resource" id="Resource_2mu51"]
+script = ExtResource("24_nu31w")
+structure = ExtResource("25_obt1j")
+structure_data = ExtResource("26_2yde8")
+difficulty_min = -1.0
+difficulty_max = 1.0
+loot_rarity = 0.0
+loot_amount = 0
+danger_level = 0
+density = 0.1
+valid_biomes = ["Grass Plains", "Forest"]
+metadata/_custom_type_script = ExtResource("24_nu31w")
+
+[sub_resource type="Resource" id="Resource_vmvb8"]
+script = ExtResource("24_nu31w")
+structure = ExtResource("26_obt1j")
+structure_data = ExtResource("28_id0nj")
+difficulty_min = -1.0
+difficulty_max = 1.0
+loot_rarity = 0.0
+loot_amount = 0
+danger_level = 0
+density = 0.1
+valid_biomes = Array[String](["Grass Plains"])
+metadata/_custom_type_script = ExtResource("24_nu31w")
 
 [sub_resource type="SphereShape3D" id="SphereShape3D_noarx"]
 
@@ -375,6 +428,7 @@ origin = NodePath("CharacterBody3D")
 [node name="StructureManager" type="Node3D" parent="."]
 unique_name_in_owner = true
 script = ExtResource("23_5t8nk")
+structure_params = Array[ExtResource("24_nu31w")]([SubResource("Resource_2mu51"), SubResource("Resource_vmvb8")])
 metadata/_custom_type_script = ExtResource("23_5t8nk")
 
 [node name="CharacterBody3D" type="CharacterBody3D" parent="."]

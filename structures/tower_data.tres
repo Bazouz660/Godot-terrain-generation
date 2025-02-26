@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="StructureData" load_steps=2 format=3 uid="uid://b7h3gcmea71lm"]
+
+[ext_resource type="Script" uid="uid://cff345sdst7dp" path="res://scripts/structure_data.gd" id="1_hjmjw"]
+
+[resource]
+script = ExtResource("1_hjmjw")
+size = Vector3(4.99662, 11.299, 4.96925)
+position = Vector3(-2.49831, -0.279063, -2.51207)
+local_pos = Vector3(-2.49831, -0.279063, -2.51207)
+rotation_degrees = Vector3(0, 0, 0)

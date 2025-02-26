@@ -88,12 +88,6 @@ void vertex() {
 }
 
 void fragment() {
-    vec3 local_normal = normalize(cross(dFdy(world_position), dFdx(world_position)));
-
-    mat3 model_matrix_inverse_transpose = inverse(transpose(mat3(MODEL_MATRIX)));
-    vec3 world_space_normal = normalize(model_matrix_inverse_transpose * local_normal);
-    vec3 view_space_normal = normalize(mat3(VIEW_MATRIX) * world_space_normal);
-
     float height      = noise_values1.r;
     float humidity    = noise_values1.g;
     float temperature = noise_values1.b;
@@ -109,6 +103,8 @@ void fragment() {
             best_biome = i;
         }
     }
+
+    //ALBEDO = world_normal;
 
     // Set the final color based on the best matching biome
     ALBEDO = biome_colors[best_biome];

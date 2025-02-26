@@ -4,12 +4,13 @@ class_name StructureManager
 
 # Global array to hold all structure data (StructureData instances)
 static var global_structures: Array[StructureData] = []
-static var structure_scene: PackedScene = preload("res://structures/house.tscn")
 
 # Dictionary to track instantiated structures (StructureData -> Structure instance)
 var instantiated_structures: Dictionary = {}
 var view_distance: float = 300.0 # Match with chunk view distance
 var timer: Timer
+
+@export var structure_params: Array[StructureGenParams] = []
 
 signal structure_generated(structure: Structure)
 
@@ -23,7 +24,7 @@ func _ready():
 	timer.start()
 
 	# Initialize structure generation parameters
-	StructureGenerationManager.initialize()
+	StructureGenerationManager.initialize(structure_params)
 
 func _update_structures():
 	# Get player position from the terrain generator
@@ -108,12 +109,7 @@ func _unload_structures(player_pos: Vector3):
 		_remove_structure(structure_data)
 
 func _instantiate_structure(structure_data: StructureData):
-	# Get the appropriate structure scene based on structure type
-	var scene_to_use = structure_scene # Default fallback
-
-	# Check if we have this structure type in the StructureGenerationManager
-	if StructureGenerationManager.structure_types.has(structure_data.structure_type):
-		scene_to_use = StructureGenerationManager.structure_types[structure_data.structure_type]
+	var scene_to_use: PackedScene = structure_data.structure_scene
 
 	# Create new structure instance
 	var structure_instance := scene_to_use.instantiate() as Structure

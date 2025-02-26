@@ -1,7 +1,7 @@
 extends Node
 class_name TerrainChunkNoise
 
-static func _generate_noise_data(chunk) -> void:
+static func _generate_noise_data(chunk: TerrainChunk) -> void:
 	# Precompute noise values for an extended grid (+ border)
 	var vertex_count = chunk.vertex_count
 	var grid_position = chunk.grid_position
